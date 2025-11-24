@@ -94,17 +94,24 @@ import Teacher from "../models/Teacher.js";
 import Coordinator from "../models/Coordinator.js";
 import Alumni from "../models/Alumni.js";
 
+// Dynamic callback URL (works for local + Render)
+const CALLBACK_URL =
+  process.env.NODE_ENV === "production"
+    ? "https://synapse-backend-ijri.onrender.com/api/auth/google/callback"
+    : "http://localhost:3000/api/auth/google/callback";
+
 passport.use(
   new GoogleStrategy(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: "http://localhost:3000/api/auth/google/callback",
+      callbackURL: CALLBACK_URL,
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
         const email = profile.emails[0].value;
 
+        // Check for user in all user types
         let user =
           (await Admin.findOne({ email })) ||
           (await Coordinator.findOne({ email })) ||
@@ -116,7 +123,7 @@ passport.use(
           return done(null, false, { message: "User not registered" });
         }
 
-        // Identify role
+        // Identify user role
         let role = "unknown";
         if (user instanceof Admin) role = user.role || "admin";
         else if (user instanceof Coordinator) role = "coordinator";
@@ -132,5 +139,10 @@ passport.use(
   )
 );
 
-passport.serializeUser((user, done) => done(null, user));
-passport.deserializeUser((obj, done) => done(null, obj));
+passport.serializeUser((user, done) => {
+  done(null, user);
+});
+
+passport.deserializeUser((obj, done) => {
+  done(null, obj);
+});
