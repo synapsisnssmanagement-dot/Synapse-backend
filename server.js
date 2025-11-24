@@ -36,8 +36,9 @@ app.use(express.json());
 
 // 🚀 UPDATED CORS FOR VERCEL FRONTEND + LOCAL DEV
 const allowedOrigins = [
-  "https://synapse-three-rho.vercel.app",   // your frontend
-  "http://localhost:5173",                   // local dev
+  "https://synapse-three-rho.vercel.app", // your frontend
+  "http://localhost:5173", // local dev
+  "synapsenssmanagement.vercel.app",
 ];
 
 app.use(
@@ -115,25 +116,28 @@ ConnectDb()
           socket.leave(room);
         });
 
-        socket.on("send_message", async ({ eventId, institutionId, content }) => {
-          if (!eventId || !institutionId || !content) return;
+        socket.on(
+          "send_message",
+          async ({ eventId, institutionId, content }) => {
+            if (!eventId || !institutionId || !content) return;
 
-          const { default: Message } = await import("./models/Message.js");
+            const { default: Message } = await import("./models/Message.js");
 
-          const message = await Message.create({
-            eventId,
-            institutionId,
-            sender: {
-              id: socket.user.id,
-              name: socket.user.name,
-              role: socket.user.role,
-            },
-            content,
-          });
+            const message = await Message.create({
+              eventId,
+              institutionId,
+              sender: {
+                id: socket.user.id,
+                name: socket.user.name,
+                role: socket.user.role,
+              },
+              content,
+            });
 
-          const room = `institution:${institutionId}:event:${eventId}`;
-          io.to(room).emit("new_message", message);
-        });
+            const room = `institution:${institutionId}:event:${eventId}`;
+            io.to(room).emit("new_message", message);
+          }
+        );
 
         socket.on("disconnect", () => {
           console.log("🔴 Socket disconnected:", socket.id);

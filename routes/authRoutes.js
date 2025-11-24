@@ -86,11 +86,53 @@
 // );
 
 // export default router;
+// import express from "express";
+// import passport from "passport";
+// import jwt from "jsonwebtoken";
+
+// const router = express.Router();
+
+// // Step 1: Google login
+// router.get(
+//   "/google",
+//   passport.authenticate("google", { scope: ["profile", "email"] })
+// );
+
+// // Step 2: Google callback
+// router.get(
+//   "/google/callback",
+//   passport.authenticate("google", {
+//     failureRedirect: "http://localhost:5173/login?error=notregistered",
+//     session: false,
+//   }),
+//   (req, res) => {
+//     const { id, role } = req.user;
+
+//     // ✅ Generate JWT token with user id + role
+//     const token = jwt.sign({ id, role }, process.env.JWT_SECRET, {
+//       expiresIn: "7d",
+//     });
+
+//     // ✅ Redirect to a single success handler route on the frontend
+//     return res.redirect(
+//       `http://localhost:5173/auth/success?token=${token}&role=${role}`
+//     );
+//   }
+// );
+
+// export default router;
+
 import express from "express";
 import passport from "passport";
 import jwt from "jsonwebtoken";
 
 const router = express.Router();
+
+// Detect environment
+const FRONTEND_URL =
+  process.env.NODE_ENV === "production"
+    ? "https://synapsenssmanagement.vercel.app"
+    : "http://localhost:5173";
 
 // Step 1: Google login
 router.get(
@@ -102,20 +144,20 @@ router.get(
 router.get(
   "/google/callback",
   passport.authenticate("google", {
-    failureRedirect: "http://localhost:5173/login?error=notregistered",
+    failureRedirect: `${FRONTEND_URL}/login?error=notregistered`,
     session: false,
   }),
   (req, res) => {
     const { id, role } = req.user;
 
-    // ✅ Generate JWT token with user id + role
+    // Generate JWT
     const token = jwt.sign({ id, role }, process.env.JWT_SECRET, {
       expiresIn: "7d",
     });
 
-    // ✅ Redirect to a single success handler route on the frontend
+    // Redirect to frontend success page (works on local + Vercel)
     return res.redirect(
-      `http://localhost:5173/auth/success?token=${token}&role=${role}`
+      `${FRONTEND_URL}/auth/success?token=${token}&role=${role}`
     );
   }
 );
