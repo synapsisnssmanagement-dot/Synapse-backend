@@ -38,7 +38,7 @@ app.use(express.json());
 const allowedOrigins = [
   "https://synapse-three-rho.vercel.app", // your frontend
   "http://localhost:5173", // local dev
-  "synapsenssmanagement.vercel.app",
+  "https://synapsenssmanagement.vercel.app/",
 ];
 
 app.use(
