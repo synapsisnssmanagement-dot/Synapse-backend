@@ -12,8 +12,8 @@ import Teacher from "../models/Teacher.js";
 import Institution from "../models/Institution.js";
 import { HfInference } from "@huggingface/inference";
 import Notification from "../models/Notification.js";
-import OpenAI from "openai";
-const openai = new OpenAI({
+import Groq from "groq-sdk";
+const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
 });
 
@@ -1453,8 +1453,8 @@ Participants Count: ${participants.length}
 Write a rich, detailed, professional 120–180 word summary highlighting objectives, activities, participation, outcomes, and impact.
 `;
 
-      const aiRes = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+      const aiRes = await groq.chat.completions.create({
+        model: "llama-3.3-70b-versatile",
         messages: [{ role: "user", content: prompt }],
         temperature: 0.5,
       });
