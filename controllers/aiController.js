@@ -18,6 +18,9 @@ export const generateAIInsight = async (req, res) => {
     if (!prompt)
       return res.status(400).json({ success: false, message: "Prompt required" });
 
+    console.log("GROQ_API_KEY exists:", !!process.env.GROQ_API_KEY);
+    console.log("Groq client initialized:", !!groq);
+
     // Call Groq model
     const completion = await groq.chat.completions.create({
       model: "llama-3.3-70b-versatile", // Groq model
@@ -37,8 +40,9 @@ export const generateAIInsight = async (req, res) => {
 
     res.json({ success: true, insight: aiResponse });
   } catch (error) {
-    console.error("AI Insight Error:", error);
-    res.status(500).json({ success: false, message: "AI generation failed" });
+    console.error("AI Insight Error:", error.message);
+    console.error("Full error:", error);
+    res.status(500).json({ success: false, message: "AI generation failed", error: error.message });
   }
 };
 
