@@ -65,24 +65,16 @@ export const teacherSignUp = async (req, res) => {
     let verificationDocument = { url: "", public_id: "" };
 
     if (req.files?.profileImage?.[0]) {
-      const uploaded = await cloudinary.uploader.upload(
-        req.files.profileImage[0].path,
-        { folder: "teacher_profiles" }
-      );
       profileImage = {
-        url: uploaded.secure_url,
-        public_id: uploaded.public_id,
+        url: req.files.profileImage[0].path,
+        public_id: req.files.profileImage[0].filename || req.files.profileImage[0].path,
       };
     }
 
     if (req.files?.verificationDocument?.[0]) {
-      const uploaded = await cloudinary.uploader.upload(
-        req.files.verificationDocument[0].path,
-        { folder: "teacher_verify_documents" }
-      );
       verificationDocument = {
-        url: uploaded.secure_url,
-        public_id: uploaded.public_id,
+        url: req.files.verificationDocument[0].path,
+        public_id: req.files.verificationDocument[0].filename || req.files.verificationDocument[0].path,
       };
     } else {
       return res.status(400).json({
@@ -111,7 +103,7 @@ export const teacherSignUp = async (req, res) => {
     });
 
     // otp
-    await sendEmail(email, "Verify your Teacher account", `Your OTP is ${otp}`);
+    sendEmail(email, "Verify your Teacher account", `Your OTP is ${otp}`).catch(console.error);
 
     return res.status(201).json({
       success: true,

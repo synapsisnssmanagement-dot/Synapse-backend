@@ -360,12 +360,9 @@ export const signupAlumni = async (req, res) => {
     // ✅ Handle profile image upload to Cloudinary
     let profileImage = {};
     if (req.file) {
-      const result = await cloudinary.uploader.upload(req.file.path, {
-        folder: "alumni_profiles",
-      });
       profileImage = {
-        url: result.secure_url,
-        public_id: result.public_id,
+        url: req.file.path,
+        public_id: req.file.filename || req.file.path,
       };
     }
 
@@ -401,7 +398,7 @@ export const signupAlumni = async (req, res) => {
     });
 
     // ✅ Send verification email
-    await sendEmail(email, "Verify your Alumni Account", `Your OTP: ${otp}`);
+    sendEmail(email, "Verify your Alumni Account", `Your OTP: ${otp}`).catch(console.error);
 
     res.status(201).json({
       success: true,

@@ -81,7 +81,7 @@ export const studentSignUp = async (req, res) => {
       $push: { students: student._id },
     });
 
-    await sendEmail(email, "Verify your NSS account", `Your OTP is ${otp}`);
+    sendEmail(email, "Verify your NSS account", `Your OTP is ${otp}`).catch(console.error);
 
     res.status(201).json({
       success: true,
