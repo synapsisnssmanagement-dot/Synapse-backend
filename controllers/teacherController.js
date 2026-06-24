@@ -11,7 +11,7 @@ import Event from "../models/Event.js";
 import Institution from "../models/Institution.js";
 import Coordinator from "../models/Coordinator.js";
 import { HfInference } from "@huggingface/inference";
-import OpenAI from "openai";
+import Groq from "groq-sdk";
 
 const generateToken = (id) =>
   jwt.sign({ id, role: "teacher" }, process.env.JWT_SECRET, {
@@ -20,8 +20,8 @@ const generateToken = (id) =>
 
 const hf = new HfInference(process.env.HUGGINGFACE_TOKEN);
 
-const openai = new OpenAI({
-  apiKey: process.env.OPEN_AI_KEY,
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY,
 });
 
 const generateOtp = () => Math.floor(100000 + Math.random() * 900000);
@@ -543,8 +543,8 @@ export const generateAttendancePdf = async (req, res) => {
     // === AI Insight ===
     let aiInsight = "AI insight could not be generated.";
     try {
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+      const completion = await groq.chat.completions.create({
+        model: "llama-3.3-70b-versatile",
         messages: [
           {
             role: "system",
@@ -699,7 +699,7 @@ Focus on social impact, volunteer engagement, and community value.`,
       .fontSize(10)
       .fillColor("gray")
       .text(
-        "Generated automatically by NSS Attendance Management System | AI Insights powered by OpenAI",
+        "Generated automatically by NSS Attendance Management System | AI Insights powered by Groq",
         0,
         pageHeight - 65,
         { align: "center" }

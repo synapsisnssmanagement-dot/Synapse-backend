@@ -9,15 +9,15 @@ import path from "path";
 import PDFDocument from "pdfkit";
 import { count } from "console";
 import Institution from "../models/Institution.js";
-import OpenAI from "openai";
+import Groq from "groq-sdk";
 import { HfInference } from "@huggingface/inference";
 import dotenv from "dotenv";
 
 dotenv.config();
 
 // Initialize AI Clients
-const openai = new OpenAI({
-  apiKey: process.env.OPEN_AI_KEY,
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY,
 });
 
 // OTP generation (6 digits)
