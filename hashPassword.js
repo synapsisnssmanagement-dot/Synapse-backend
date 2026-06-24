@@ -1,4 +1,4 @@
-import bcrypt, { hash } from "bcrypt";
+import bcrypt, { hash } from "bcryptjs";
 
 const password = "Pass@123";
 const saltRounds = 10;

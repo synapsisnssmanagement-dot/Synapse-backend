@@ -1,4 +1,4 @@
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import Coordinator from "../models/Coordinator.js";
 import cloudinary from "../utils/cloudinary.js";

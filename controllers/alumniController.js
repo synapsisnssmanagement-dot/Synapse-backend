@@ -1,5 +1,5 @@
 // import jwt from "jsonwebtoken";
-// import bcrypt from "bcrypt";
+// import bcrypt from "bcryptjs";
 // import Alumni from "../models/Alumni.js";
 // import { sendEmail } from "../utils/sendEmail.js";
 // import cloudinary from "../utils/cloudinary.js";
@@ -305,7 +305,7 @@
 // };
 
 import jwt from "jsonwebtoken";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import Alumni from "../models/Alumni.js";
 import { sendEmail } from "../utils/sendEmail.js";
 import cloudinary from "../utils/cloudinary.js";

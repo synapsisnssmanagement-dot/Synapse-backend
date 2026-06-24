@@ -1,5 +1,5 @@
 import Student from "../models/Student.js";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import cloudinary from "../utils/cloudinary.js";
 import { sendEmail } from "../utils/sendEmail.js";
 import jwt from "jsonwebtoken";
