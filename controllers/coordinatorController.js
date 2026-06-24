@@ -14,7 +14,7 @@ import { HfInference } from "@huggingface/inference";
 import Notification from "../models/Notification.js";
 import OpenAI from "openai";
 const openai = new OpenAI({
-  apiKey: process.env.OPEN_AI_KEY,
+  apiKey: process.env.GROQ_API_KEY,
 });
 
 const generateOtp = () => Math.floor(100000 + Math.random() * 900000);
