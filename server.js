@@ -1,6 +1,13 @@
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
+import helmet from "helmet";
+import mongoose from "mongoose";
+import {
+  globalLimiter,
+  authLimiter,
+  aiLimiter,
+} from "./middleware/rateLimiters.js";
 import passport from "passport";
 import session from "express-session";
 import { ConnectDb } from "./configs/db.js";
@@ -33,7 +40,15 @@ dotenv.config();
 const port = process.env.PORT || 5000;
 
 const app = express();
-app.use(express.json());
+
+// Render terminates TLS in front of the app, so the client IP arrives in
+// X-Forwarded-For. Without this, rate limiting would see every request as
+// coming from the proxy and throttle all users as one.
+app.set("trust proxy", 1);
+
+app.use(helmet());
+app.use(express.json({ limit: "1mb" }));
+app.use(globalLimiter);
 
 // 🚀 UPDATED CORS FOR VERCEL FRONTEND + LOCAL DEV
 const allowedOrigins = [
@@ -55,18 +70,49 @@ app.use(
   })
 );
 
+// Strips $-prefixed operators out of query filters, so a value like
+// {"$ne": null} in a request body cannot turn a lookup into a match-anything.
+mongoose.set("sanitizeFilter", true);
+
+const isProduction = process.env.NODE_ENV === "production";
+
+if (isProduction && !process.env.SESSION_SECRET) {
+  throw new Error("SESSION_SECRET must be set in production");
+}
+
 // Passport OAuth
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || "your_secret_key",
+    secret: process.env.SESSION_SECRET || "dev-only-insecure-secret",
     resave: false,
-    saveUninitialized: true,
+    // Only persist a session once something is actually stored on it.
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
+      maxAge: 24 * 60 * 60 * 1000,
+    },
   })
 );
 app.use(passport.initialize());
 app.use(passport.session());
 
 // API Routes
+// Strict limits on credential-guessing surfaces. These must come before the
+// routers so they run first.
+app.use("/api/admin/login", authLimiter);
+app.use("/api/admin/verify-otp", authLimiter);
+app.use("/api/students/studentlogin", authLimiter);
+app.use("/api/students/student-verify-otp", authLimiter);
+app.use("/api/teacher/login", authLimiter);
+app.use("/api/teacher/verify-otp", authLimiter);
+app.use("/api/coordinator/logincoordinator", authLimiter);
+app.use("/api/coordinator/verifyotp", authLimiter);
+app.use("/api/alumni/login", authLimiter);
+app.use("/api/otp", authLimiter);
+app.use("/api/ai", aiLimiter);
+
 app.use("/api/admin", router);
 app.use("/api/chat", messagerouter);
 app.use("/api/events", eventRouter);
