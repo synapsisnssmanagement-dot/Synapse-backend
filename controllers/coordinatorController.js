@@ -10,6 +10,7 @@ import fs from "fs";
 import path from "path";
 import Teacher from "../models/Teacher.js";
 import Institution from "../models/Institution.js";
+import { denyCrossInstitution } from "../utils/ownership.js";
 import { HfInference } from "@huggingface/inference";
 import Notification from "../models/Notification.js";
 import Groq from "groq-sdk";
@@ -2312,6 +2313,12 @@ export const unassignTeacherFromEvent = async (req, res) => {
       return res.status(403).json({ message: "Unauthorized" });
     }
 
+    const existing = await Event.findById(eventId).select("institution");
+    if (!existing) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+    if (denyCrossInstitution(req, res, existing)) return;
+
     const event = await Event.findByIdAndUpdate(
       eventId,
       { $pull: { assignedTeacher: teacherId } },
@@ -2576,6 +2583,8 @@ export const toggleDonation = async (req, res) => {
     if (!event) {
       return res.status(404).json({ message: "Event not found" });
     }
+
+    if (denyCrossInstitution(req, res, event)) return;
 
     // Toggle donationOpen
     event.donationOpen = !event.donationOpen;

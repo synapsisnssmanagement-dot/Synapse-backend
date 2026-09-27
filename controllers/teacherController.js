@@ -12,6 +12,25 @@ import Institution from "../models/Institution.js";
 import Coordinator from "../models/Coordinator.js";
 import { HfInference } from "@huggingface/inference";
 import Groq from "groq-sdk";
+import { denyCrossInstitution } from "../utils/ownership.js";
+
+// Grace marks affect a student's academic record, so a non-numeric or
+// out-of-range value must be rejected rather than stored as NaN.
+const MAX_GRACE_MARKS = 100;
+
+const parseGraceMarks = (value) => {
+  const marks = Number(value);
+  if (!Number.isFinite(marks) || marks < 0 || marks > MAX_GRACE_MARKS) {
+    return null;
+  }
+  return marks;
+};
+
+const rejectGraceMarks = (res) =>
+  res.status(400).json({
+    success: false,
+    message: `Marks must be a number between 0 and ${MAX_GRACE_MARKS}`,
+  });
 
 const generateToken = (id) =>
   jwt.sign({ id, role: "teacher" }, process.env.JWT_SECRET, {
@@ -236,6 +255,14 @@ export const markAttendance = async (req, res) => {
       return res
         .status(404)
         .json({ success: false, message: "Event Not found" });
+    }
+
+    if (denyCrossInstitution(req, res, event)) return;
+
+    if (!Array.isArray(attendanceList)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "attendanceList must be an array" });
     }
 
     attendanceList.forEach(({ studentId, status }) => {
@@ -793,6 +820,11 @@ export const assignGraceMark = async (req, res) => {
         .status(404)
         .json({ success: false, message: "Student not found" });
 
+    if (denyCrossInstitution(req, res, student)) return;
+
+    const parsedMarks = parseGraceMarks(marks);
+    if (parsedMarks === null) return rejectGraceMarks(res);
+
     const exists = student.graceHistory.some(
       (h) => h.eventId.toString() === eventId
     );
@@ -806,7 +838,7 @@ export const assignGraceMark = async (req, res) => {
 
     student.graceHistory.push({
       eventId,
-      marks: Number(marks),
+      marks: parsedMarks,
       date: new Date(),
     });
 
@@ -829,6 +861,11 @@ export const updateGraceMark = async (req, res) => {
         .status(404)
         .json({ success: false, message: "Student not found" });
 
+    if (denyCrossInstitution(req, res, student)) return;
+
+    const parsedMarks = parseGraceMarks(marks);
+    if (parsedMarks === null) return rejectGraceMarks(res);
+
     const record = student.graceHistory.find(
       (h) => h.eventId.toString() === eventId
     );
@@ -839,7 +876,7 @@ export const updateGraceMark = async (req, res) => {
         message: "No grace marks found for this event",
       });
 
-    record.marks = Number(marks);
+    record.marks = parsedMarks;
 
     await student.save(); // auto recalculates
 
@@ -858,6 +895,8 @@ export const deleteGraceMark = async (req, res) => {
       return res
         .status(404)
         .json({ success: false, message: "Student not found" });
+
+    if (denyCrossInstitution(req, res, student)) return;
 
     student.graceHistory = student.graceHistory.filter(
       (h) => h.eventId.toString() !== eventId
@@ -1410,22 +1449,28 @@ export const uploadEventImages = async (req, res) => {
 export const editEvent = async (req, res) => {
   try {
     const { id } = req.params;
-    const {
-      title,
-      description,
-      date,
-      location,
-      hours,
-      status,
-      assignedTeacher,
-      assignedCoordinators,
-    } = req.body;
+    // Staffing (assignedTeacher / assignedCoordinators) is deliberately not
+    // editable here: it is the coordinator's responsibility, and accepting it
+    // let a teacher reassign an event's staff.
+    const { title, description, date, location, hours, status } = req.body;
 
     const event = await Event.findById(id);
     if (!event) {
       return res
         .status(404)
         .json({ success: false, message: "Event not found" });
+    }
+
+    if (denyCrossInstitution(req, res, event)) return;
+
+    const isAssigned = event.assignedTeacher?.some(
+      (t) => String(t) === String(req.user._id)
+    );
+    if (!isAssigned) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not assigned to this event",
+      });
     }
 
     // update editable fields
@@ -1435,8 +1480,6 @@ export const editEvent = async (req, res) => {
     if (location) event.location = location;
     if (hours) event.hours = hours;
     if (status) event.status = status;
-    if (assignedTeacher) event.assignedTeacher = assignedTeacher;
-    if (assignedCoordinators) event.assignedCoordinators = assignedCoordinators;
 
     await event.save();
 
