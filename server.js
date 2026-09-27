@@ -2,6 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import helmet from "helmet";
+import crypto from "crypto";
 import mongoose from "mongoose";
 import {
   globalLimiter,
@@ -76,14 +77,22 @@ mongoose.set("sanitizeFilter", true);
 
 const isProduction = process.env.NODE_ENV === "production";
 
-if (isProduction && !process.env.SESSION_SECRET) {
-  throw new Error("SESSION_SECRET must be set in production");
+// Auth is JWT-based and the OAuth routes pass session:false, so the session
+// store is not load-bearing. Rather than refuse to boot without a configured
+// secret, fall back to a random one: sessions then do not survive a restart,
+// which is preferable to shipping a known hard-coded secret.
+if (!process.env.SESSION_SECRET) {
+  console.warn(
+    "SESSION_SECRET is not set — using a random per-boot secret. Set it to persist sessions across restarts."
+  );
 }
+const sessionSecret =
+  process.env.SESSION_SECRET || crypto.randomBytes(32).toString("hex");
 
 // Passport OAuth
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || "dev-only-insecure-secret",
+    secret: sessionSecret,
     resave: false,
     // Only persist a session once something is actually stored on it.
     saveUninitialized: false,
