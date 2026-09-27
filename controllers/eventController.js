@@ -18,7 +18,8 @@ export const createEvents = async (req, res) => {
     });
     res.status(201).json({ success: true, event });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("eventController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -28,14 +29,15 @@ export const getEvents = async (req, res) => {
     const events = await Event.find().populate("participants", "name email");
     res.json({ success: true, events });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("eventController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
 // get all events on the table
 export const getAllevents = async (req, res) => {
   try {
-    const events = await Event.find();
+    const events = await Event.find().sort({ createdAt: -1 }).limit(2000);
     if (events.length == 0) {
       return res
         .status(404)
@@ -43,7 +45,8 @@ export const getAllevents = async (req, res) => {
     }
     res.status(200).json({ success: true, events });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("eventController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -57,10 +60,13 @@ export const getAllEventsAlumniInstituition = async (req, res) => {
         .json({ success: false, message: "Alumni Not found" });
     }
     const instituitionId = Alum.institution;
-    const InstitutionEvent = await Event.find({ institution: instituitionId });
+    const InstitutionEvent = await Event.find({ institution: instituitionId })
+      .sort({ createdAt: -1 })
+      .limit(2000);
     res.json({ success: true, events: InstitutionEvent });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("eventController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -75,7 +81,8 @@ export const getEventById = async (req, res) => {
     }
     res.json({ success: true, events });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("eventController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -91,7 +98,8 @@ export const deleteEvent = async (req, res) => {
     }
     res.json({ success: true, message: "event deleted successfully" });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("eventController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -131,7 +139,8 @@ export const assignStudentToEvent = async (req, res) => {
       student,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("eventController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -162,7 +171,8 @@ export const updateEvent = async (req, res) => {
 
     res.json({ success: true, message: "event updated", events });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("eventController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -180,7 +190,8 @@ export const getEventParticipants = async (req, res) => {
     }
     res.json({ success: true, participants: events.participants });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("eventController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -215,7 +226,8 @@ export const uploadEventImages = async (req, res) => {
       images: event.images,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("eventController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -229,7 +241,8 @@ export const getEventImages = async (req, res) => {
     }
     res.json({ success: true, images: event.images });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("eventController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -258,7 +271,8 @@ export const deleteEventImage = async (req, res) => {
     await events.save();
     res.status(200).json({ success: true, events });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("eventController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -282,9 +296,10 @@ export const getAllEventImages = async (req, res) => {
     );
     res.status(200).json({ success: true, images: getAllImages });
   } catch (error) {
+    console.error("eventController.js:", error);
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Something went wrong. Please try again.",
     });
   }
 };
@@ -320,7 +335,8 @@ export const startEvent = async (req, res) => {
       event,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("eventController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -401,6 +417,7 @@ export const completeEvent = async (req, res) => {
       event,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("eventController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };

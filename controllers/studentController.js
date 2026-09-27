@@ -23,6 +23,10 @@ const groq = new Groq({
 // OTP generation (6 digits)
 const generateOtp = () => Math.floor(100000 + Math.random() * 900000);
 
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const passwordRegex =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+
 // Token generation
 const generateToken = (student) => {
   return jwt.sign(
@@ -44,6 +48,26 @@ export const studentSignUp = async (req, res) => {
       password,
       institution,
     } = req.body;
+
+    if (!name || !email || !phoneNumber || !department || !password || !institution) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Missing required fields" });
+    }
+
+    if (!emailRegex.test(email)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid email format" });
+    }
+
+    if (!passwordRegex.test(password)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Password must be 8+ chars, include uppercase, lowercase, number, and special character",
+      });
+    }
 
     const emailExist = await Student.findOne({ email });
     if (emailExist) {
@@ -90,7 +114,8 @@ export const studentSignUp = async (req, res) => {
       role: "student",
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("studentController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -121,7 +146,8 @@ export const verifyOtp = async (req, res) => {
       message: "OTP has been verified,now wait for admin approval",
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("studentController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -165,7 +191,8 @@ export const studentLogin = async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("studentController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -209,7 +236,8 @@ export const adminCreateStudent = async (req, res) => {
       student,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("studentController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -232,7 +260,8 @@ export const approveStudent = async (req, res) => {
       student,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("studentController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -257,7 +286,10 @@ export const studentUpdate = async (req, res) => {
       student.talents = Array.isArray(talents) ? talents : [talents];
     }
 
-    if (status) student.status = status; // should only be set by admin
+    // Only an admin caller may change status; this route is already
+    // adminOnly-gated, but the check is kept here too so this handler stays
+    // safe even if it is ever reused from a different route.
+    if (status && req.admin) student.status = status;
 
     if (req.file) {
       if (student.profileImage?.public_id) {
@@ -277,7 +309,8 @@ export const studentUpdate = async (req, res) => {
       student,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("studentController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -299,7 +332,8 @@ export const deleteStudent = async (req, res) => {
 
     res.json({ success: true, message: "Student deleted successfully" });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("studentController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -319,7 +353,8 @@ export const getStudentEvents = async (req, res) => {
 
     res.json({ success: true, events: student.assignedEvents });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("studentController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -352,7 +387,8 @@ export const removeStudentFromEvent = async (req, res) => {
       message: "Student removed from event successfully",
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("studentController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -542,7 +578,8 @@ export const generateOwnCertificate = async (req, res) => {
       });
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("studentController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -561,7 +598,8 @@ export const getPendingStudent = async (req, res) => {
       students: pendingStudents,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("studentController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -589,7 +627,8 @@ export const approvePendingStudent = async (req, res) => {
       message: `${student.name} has been approved successfully`,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("studentController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -620,17 +659,22 @@ export const rejectStudent = async (req, res) => {
       message: `${student.name} has been rejected successfully`,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("studentController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
 // Get all students with their status
 export const getAllStudents = async (req, res) => {
   try {
+    // Capped rather than truly paginated: the admin UI has no pagination
+    // controls yet, so a default page size would silently hide records. This
+    // is a safety net against an unbounded scan, not a page size.
     const students = await Student.find()
       .select("-password -otp -otpExpiry") // don’t return sensitive data
       .populate("institution", "name address")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .limit(2000);
 
     res.json({
       success: true,
@@ -638,7 +682,8 @@ export const getAllStudents = async (req, res) => {
       students,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("studentController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -659,7 +704,8 @@ export const rejectInDashboardStudent = async (req, res) => {
       student,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("studentController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -705,7 +751,7 @@ export const rejectInDashboardStudent = async (req, res) => {
 //     });
 //   } catch (error) {
 //     console.error("Dashboard Error:", error);
-//     res.status(500).json({ success: false, message: error.message });
+//     res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
 //   }
 // };
 
@@ -816,7 +862,7 @@ export const getStudentDashboard = async (req, res) => {
     });
   } catch (error) {
     console.error("Dashboard Error:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -841,7 +887,7 @@ export const getStudentProfile = async (req, res) => {
     });
   } catch (error) {
     console.error("Profile Error:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -898,7 +944,7 @@ export const editStudentProfile = async (req, res) => {
     });
   } catch (error) {
     console.error("Profile Edit Error:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -1057,7 +1103,7 @@ export const getFilteredStudentEvents = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Internal server error",
-      error: error.message,
+      error: "Something went wrong. Please try again.",
     });
   }
 };
@@ -1334,7 +1380,7 @@ export const generateAICertificate = async (req, res) => {
   } catch (error) {
     console.error("Certificate Error:", error);
     if (!res.headersSent)
-      res.status(500).json({ success: false, message: error.message });
+      res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -1409,7 +1455,7 @@ export const getStudentAttendanceForEvent = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Internal Server Error",
-      error: error.message,
+      error: "Something went wrong. Please try again.",
     });
   }
 };
@@ -1485,7 +1531,7 @@ export const uploadEventImages = async (req, res) => {
     console.error("❌ Error uploading event images:", error);
     return res.status(500).json({
       success: false,
-      message: error.message || "Internal server error",
+      message: "Something went wrong. Please try again." || "Internal server error",
     });
   }
 };

@@ -42,7 +42,7 @@ export const generateAIInsight = async (req, res) => {
   } catch (error) {
     console.error("AI Insight Error:", error.message);
     console.error("Full error:", error);
-    res.status(500).json({ success: false, message: "AI generation failed", error: error.message });
+    res.status(500).json({ success: false, message: "AI generation failed", error: "Something went wrong. Please try again." });
   }
 };
 

@@ -38,6 +38,7 @@ const coordinatorSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Institution",
       required: true,
+      index: true,
     },
     verificationDocument: {
       url: { type: String, default: "" },

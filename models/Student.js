@@ -99,6 +99,7 @@ const StudentSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Institution",
       required: true,
+      index: true,
     },
 
     // Grace mark Recommendation

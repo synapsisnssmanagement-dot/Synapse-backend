@@ -47,6 +47,20 @@ export const coordinatorSignup = async (req, res) => {
         .json({ success: false, message: "Missing Fields" });
     }
 
+    if (!emailRegex.test(email)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid email format" });
+    }
+
+    if (!passwordRegex.test(password)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Password must be 8+ chars, include uppercase, lowercase, number, and special character",
+      });
+    }
+
     // Validate institution exists
     const inst = await Institution.findById(institutionId);
     if (!inst) {
@@ -114,7 +128,8 @@ export const coordinatorSignup = async (req, res) => {
       role: "coordinator",
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("coordinatorController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -141,7 +156,8 @@ export const verifyOtp = async (req, res) => {
       message: "Otp verified successfully.wait for admin approval",
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("coordinatorController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -173,7 +189,8 @@ export const Login = async (req, res) => {
       coordinator,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("coordinatorController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -185,6 +202,20 @@ export const createEvent = async (req, res) => {
       return res
         .status(400)
         .json({ success: false, message: "Missing Fields" });
+    }
+
+    const parsedDate = new Date(date);
+    if (Number.isNaN(parsedDate.getTime())) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid date" });
+    }
+
+    const parsedHours = Number(hours);
+    if (!Number.isFinite(parsedHours) || parsedHours <= 0 || parsedHours > 24) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Hours must be a number between 1 and 24" });
     }
 
     // fetch coordinator
@@ -230,8 +261,8 @@ export const createEvent = async (req, res) => {
       title,
       description,
       location,
-      date,
-      hours: hours || 0,
+      date: parsedDate,
+      hours: parsedHours,
       assignedCoordinators: req.user._id,
       institution: institutionId,
       createdBy: req.user._id,
@@ -263,28 +294,30 @@ export const createEvent = async (req, res) => {
     const notiTitle = "New Event Created";
     const notiMessage = `A new event "${title}" has been created at your institution.`;
 
-    // notify teachers
-    for (const teach of teachers) {
-      await Notification.create({
+    // A single insertMany rather than one round trip per recipient: with a
+    // few hundred volunteers this was previously a few hundred sequential
+    // awaits inside one request.
+    const notifications = [
+      ...teachers.map((teach) => ({
         user: teach._id,
         userModel: "Teacher",
         institution: institutionId,
         title: notiTitle,
         message: notiMessage,
         event: newEvent._id,
-      });
-    }
-
-    // notify volunteer students ONLY
-    for (const stud of volunteerStudents) {
-      await Notification.create({
+      })),
+      ...volunteerStudents.map((stud) => ({
         user: stud._id,
         userModel: "Student",
         institution: institutionId,
         title: notiTitle,
         message: notiMessage,
         event: newEvent._id,
-      });
+      })),
+    ];
+
+    if (notifications.length) {
+      await Notification.insertMany(notifications);
     }
 
     res.json({
@@ -294,7 +327,7 @@ export const createEvent = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -419,7 +452,7 @@ export const createEvent = async (req, res) => {
 
 //   } catch (error) {
 //     console.error(error);
-//     res.status(500).json({ success: false, message: error.message });
+//     res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
 //   }
 // };
 
@@ -448,7 +481,8 @@ export const getStudentBySkill = async (req, res) => {
     }).select("name email department skills status");
     res.json({ success: true, count: students.length, students });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("coordinatorController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -480,7 +514,8 @@ export const studentToVolunteer = async (req, res) => {
       student,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("coordinatorController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -510,7 +545,8 @@ export const volunteerTostudent = async (req, res) => {
       student,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("coordinatorController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -572,16 +608,16 @@ export const assignVoulnteerToEvent = async (req, res) => {
       { $addToSet: { assignedEvents: event._id } }
     );
 
-    for (const v of volunteer) {
-      await Notification.create({
+    await Notification.insertMany(
+      volunteer.map((v) => ({
         user: v._id,
         userModel: "Student",
         institution: coordinator.institution,
         title: "Assigned as Volunteer",
         message: `You have been selected as a volunteer for the event "${event.title}".`,
         event: event._id,
-      });
-    }
+      }))
+    );
 
     const updatedEvent = await Event.findById(eventId).populate(
       "participants",
@@ -594,7 +630,8 @@ export const assignVoulnteerToEvent = async (req, res) => {
       event: updatedEvent,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("coordinatorController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -648,7 +685,7 @@ export const assignVoulnteerToEvent = async (req, res) => {
 //       student,
 //     });
 //   } catch (error) {
-//     res.status(500).json({ success: false, message: error.message });
+//     res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
 //   }
 // };
 
@@ -750,7 +787,7 @@ export const assignVoulnteerToEvent = async (req, res) => {
 //     console.error("Grace mark recommendation error:", error);
 //     res.status(500).json({
 //       success: false,
-//       message: error.message,
+//       message: "Something went wrong. Please try again.",
 //     });
 //   }
 // };
@@ -998,7 +1035,7 @@ export const recommendedGraceMark = async (req, res) => {
     console.error("Grace mark recommendation error:", error);
     res.status(500).json({
       success: false,
-      message: "Server error: " + error.message,
+      message: "Something went wrong. Please try again.",
     });
   }
 };
@@ -1165,7 +1202,7 @@ export const recommendedGraceMark = async (req, res) => {
 //     console.error("PDF Generation Error:", err);
 //     res.status(500).json({
 //       success: false,
-//       message: err.message || "Internal Server Error during PDF generation",
+//       message: "Something went wrong. Please try again." || "Internal Server Error during PDF generation",
 //     });
 //   }
 // };
@@ -1375,7 +1412,7 @@ export const recommendedGraceMark = async (req, res) => {
 //     console.error("PDF Generation Error:", err);
 //     res.status(500).json({
 //       success: false,
-//       message: err.message || "Internal Server Error during PDF generation",
+//       message: "Something went wrong. Please try again." || "Internal Server Error during PDF generation",
 //     });
 //   }
 // };
@@ -1716,7 +1753,8 @@ export const updateEventStatus = async (req, res) => {
       event,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("coordinatorController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -1732,7 +1770,8 @@ export const getAllPendingCoordinator = async (req, res) => {
       coordinator: pendingCoordinator,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("coordinatorController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -1761,7 +1800,8 @@ export const approveCoordinator = async (req, res) => {
       coordinator: await coordinator.populate("institution", "name address"),
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("coordinatorController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -1792,7 +1832,8 @@ export const rejectCoordinator = async (req, res) => {
       message: `${coordinator.name} has been rejected successfully`,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("coordinatorController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -1801,7 +1842,8 @@ export const getAllCoordinators = async (req, res) => {
     const coordinator = await Coordinator.find()
       .populate("institution", "name address contactEmail")
       .select("-password -otp -otpExpiry") // don’t return sensitive data
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .limit(2000);
 
     res.json({
       success: true,
@@ -1809,7 +1851,8 @@ export const getAllCoordinators = async (req, res) => {
       coordinator,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("coordinatorController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -1830,7 +1873,8 @@ export const rejectInDashboardCoordinator = async (req, res) => {
       coordinator,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("coordinatorController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -1937,7 +1981,7 @@ export const getCoordinatorDashboard = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Error fetching coordinator dashboard",
-      error: error.message,
+      error: "Something went wrong. Please try again.",
     });
   }
 };
@@ -1978,7 +2022,7 @@ export const getCoordinatorDashboard = async (req, res) => {
 //     console.error("❌ Error fetching coordinator profile:", error);
 //     res.status(500).json({
 //       success: false,
-//       message: error.message || "Server error while fetching profile",
+//       message: "Something went wrong. Please try again." || "Server error while fetching profile",
 //     });
 //   }
 // };
@@ -2009,7 +2053,8 @@ export const getAllStudentsByCoordinator = async (req, res) => {
       students,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("coordinatorController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -2036,7 +2081,8 @@ export const getStudentById = async (req, res) => {
 
     res.json({ success: true, student });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("coordinatorController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -2069,7 +2115,8 @@ export const updateStudentByCoordinator = async (req, res) => {
       student,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("coordinatorController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -2095,7 +2142,8 @@ export const getMyEvents = async (req, res) => {
       events: myEvents,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("coordinatorController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -2165,7 +2213,7 @@ export const editEvent = async (req, res) => {
     });
   } catch (error) {
     console.error("Error updating event:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -2236,7 +2284,7 @@ export const assignTeacherToEvent = async (req, res) => {
     });
   } catch (error) {
     console.error("Assign Teacher Error:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -2266,7 +2314,7 @@ export const getAllEventsByCoordinator = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching events:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -2294,7 +2342,7 @@ export const getAllTeachersByCoordinator = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching teachers:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -2408,16 +2456,16 @@ export const unassignVolunteerFromEvent = async (req, res) => {
       { $pull: { assignedEvents: eventId } }
     );
 
-    for (const student of volunteers) {
-      await Notification.create({
+    await Notification.insertMany(
+      volunteers.map((student) => ({
         user: student._id,
         userModel: "Student",
         institution: coordinator.institution,
         title: "Removed as Volunteer",
         message: `You have been unassigned as a volunteer from the event "${event.title}".`,
         event: eventId,
-      });
-    }
+      }))
+    );
 
     const updatedEvent = await Event.findById(eventId).populate(
       "participants",
@@ -2430,7 +2478,8 @@ export const unassignVolunteerFromEvent = async (req, res) => {
       event: updatedEvent,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("coordinatorController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -2454,7 +2503,8 @@ export const getAllVolunteers = async (req, res) => {
       volunteers,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("coordinatorController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -2597,10 +2647,11 @@ export const toggleDonation = async (req, res) => {
       donationOpen: event.donationOpen,
     });
   } catch (error) {
+    console.error("coordinatorController.js:", error);
     return res.status(500).json({
       success: false,
       message: "Server Error",
-      error: error.message,
+      error: "Something went wrong. Please try again.",
     });
   }
 };

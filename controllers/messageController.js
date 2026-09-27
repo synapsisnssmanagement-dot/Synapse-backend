@@ -11,7 +11,7 @@ export const getMessagesForEvent = async (req, res) => {
     return res.json({ success: true, messages });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -58,6 +58,6 @@ export const sendMessage = async (req, res) => {
     });
   } catch (error) {
     console.error("Error sending message:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };

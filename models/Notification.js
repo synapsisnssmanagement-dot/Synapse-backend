@@ -18,6 +18,7 @@ const notificationSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Institution",
       required: true,
+      index: true,
     },
 
     title: { type: String, required: true },

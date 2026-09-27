@@ -70,7 +70,7 @@
 //       alumniId: alumni._id,
 //     });
 //   } catch (error) {
-//     res.status(500).json({ success: false, message: error.message });
+//     res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
 //   }
 // };
 
@@ -100,7 +100,7 @@
 //       message: "OTP verified. Now wait for admin approval",
 //     });
 //   } catch (error) {
-//     res.status(500).json({ success: false, message: error.message });
+//     res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
 //   }
 // };
 
@@ -129,7 +129,7 @@
 //     const token = genrateToken(alumni._id);
 //     res.json({ success: true, message: "Login successful", token, alumni });
 //   } catch (error) {
-//     res.status(500).json({ success: false, message: error.message });
+//     res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
 //   }
 // };
 
@@ -147,7 +147,7 @@
 //     await alumni.save();
 //     res.json({ success: true, message: "Alumni approved", alumni });
 //   } catch (error) {
-//     res.status(500).json({ success: false, message: error.message });
+//     res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
 //   }
 // };
 
@@ -181,7 +181,7 @@
 //     await alumni.save();
 //     res.json({ success: true, message: "Alumni updated successfully", alumni });
 //   } catch (error) {
-//     res.status(500).json({ success: false, message: error.message });
+//     res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
 //   }
 // };
 
@@ -204,7 +204,7 @@
 
 //     res.json({ success: true, message: "Alumni deleted successfully!!!" });
 //   } catch (error) {
-//     res.status(500).json({ success: false, message: error.message });
+//     res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
 //   }
 // };
 
@@ -221,7 +221,7 @@
 //     await alumni.save();
 //     res.json({ success: true, message: "testimonial submitted" });
 //   } catch (error) {
-//     res.status(500).json({ success: false, message: error.message });
+//     res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
 //   }
 // };
 
@@ -253,7 +253,7 @@
 //       testimonial,
 //     });
 //   } catch (error) {
-//     res.status(500).json({ success: false, message: error.message });
+//     res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
 //   }
 // };
 
@@ -279,7 +279,7 @@
 //       .slice(0, 3);
 //     res.json({ success: true, testimonials: approvedTestimonials });
 //   } catch (error) {
-//     res.status(500).json({ success: false, message: error.message });
+//     res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
 //   }
 // };
 
@@ -300,7 +300,7 @@
 //     await alumni.save();
 //     res.json({ success: true, message: "Achievement added" });
 //   } catch (error) {
-//     res.status(500).json({ success: false, message: error.message });
+//     res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
 //   }
 // };
 
@@ -409,7 +409,7 @@ export const signupAlumni = async (req, res) => {
     });
   } catch (error) {
     console.error("Signup Error:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 //
@@ -447,7 +447,8 @@ export const loginAlumni = async (req, res) => {
       alumni,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("alumniController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -467,7 +468,8 @@ export const addTestimonial = async (req, res) => {
 
     res.json({ success: true, message: "Testimonial submitted successfully." });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("alumniController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -514,7 +516,8 @@ export const updateTestimonialVisibility = async (req, res) => {
       testimonial,
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    console.error("alumniController.js:", error);
+    return res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -544,7 +547,8 @@ export const getTopTestimonials = async (req, res) => {
 
     res.json({ success: true, testimonials: approvedTestimonials });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("alumniController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -561,7 +565,8 @@ export const getAllPendingAlumni = async (req, res) => {
       alumni: pendingAlumni,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("alumniController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -592,7 +597,8 @@ export const approveAlumni = async (req, res) => {
       alumni: await alumni.populate("institution", "name address"),
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("alumniController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -628,7 +634,8 @@ export const rejectAlumni = async (req, res) => {
       message: `${alumni.name} has been rejected successfully`,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("alumniController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -638,7 +645,8 @@ export const getAllAlumnis = async (req, res) => {
     const alumnis = await Alumni.find()
       .populate("institution", "name address contactEmail")
       .select("-password -otp -otpExpiry")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .limit(2000);
 
     res.json({
       success: true,
@@ -646,7 +654,8 @@ export const getAllAlumnis = async (req, res) => {
       alumnis,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("alumniController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -670,7 +679,8 @@ export const rejectInDashboardAlumni = async (req, res) => {
       alumni,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("alumniController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -790,7 +800,7 @@ export const getAllTestimonials = async (req, res) => {
     });
   } catch (error) {
     console.error("Fetch testimonials error:", error);
-    return res.status(500).json({ success: false, message: error.message });
+    return res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -809,6 +819,6 @@ export const getAllImages = async (req, res) => {
     res.json({ success: true, images: allImages });
   } catch (error) {
     console.error("Fetch testimonials error:", error);
-    return res.status(500).json({ success: false, message: error.message });
+    return res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };

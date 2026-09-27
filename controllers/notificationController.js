@@ -30,7 +30,7 @@ export const getNotifications = async (req, res) => {
     });
   } catch (error) {
     console.error("Get Notifications Error:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -63,7 +63,7 @@ export const markAsRead = async (req, res) => {
     });
   } catch (error) {
     console.error("Mark Notification Error:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -83,7 +83,7 @@ export const markAllAsRead = async (req, res) => {
     });
   } catch (error) {
     console.error("Mark All Read Error:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -112,7 +112,7 @@ export const deleteNotification = async (req, res) => {
     });
   } catch (error) {
     console.error("Delete Notification Error:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -129,6 +129,6 @@ export const clearAllNotifications = async (req, res) => {
     });
   } catch (error) {
     console.error("Clear All Notifications Error:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };

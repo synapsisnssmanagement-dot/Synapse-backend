@@ -56,7 +56,7 @@ export const verifyOtp = async (req, res) => {
       // student becomes verified immediately
       user.status = "pending";
     } else if (role === "coordinator") {
-      user.status === "pending";
+      user.status = "pending";
     } else if (role === "alumni") {
       user.status = "pending";
     }
@@ -74,6 +74,6 @@ export const verifyOtp = async (req, res) => {
     console.error("Error verifying OTP:", error);
     return res
       .status(500)
-      .json({ success: false, message: "Server error: " + error.message });
+      .json({ success: false, message: "Something went wrong. Please try again." });
   }
 };

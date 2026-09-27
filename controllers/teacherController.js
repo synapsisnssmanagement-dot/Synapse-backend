@@ -135,7 +135,7 @@ export const teacherSignUp = async (req, res) => {
     console.error("Error in teacher signup:", error);
     return res
       .status(500)
-      .json({ success: false, message: "Signup failed: " + error.message });
+      .json({ success: false, message: "Signup failed. Please try again." });
   }
 };
 
@@ -163,7 +163,8 @@ export const verifyOtp = async (req, res) => {
       teacher,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("teacherController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -189,7 +190,8 @@ export const teacherLogin = async (req, res) => {
 
     res.json({ success: true, message: "Login succssfully", token });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("teacherController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -208,7 +210,7 @@ export const teacherLogin = async (req, res) => {
 //     await teacher.save();
 //     res.json({ success: true, message: "Teacher approved successfully" });
 //   } catch (error) {
-//     res.status(500).json({ success: false, message: error.message });
+//     res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
 //   }
 // };
 
@@ -240,7 +242,8 @@ export const assignTeacherToEvent = async (req, res) => {
 
     res.json({ success: true, message: "Teacher is assigned to event" });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("teacherController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -288,7 +291,8 @@ export const markAttendance = async (req, res) => {
       attendance: event.attendance,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("teacherController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -340,7 +344,7 @@ export const markAttendance = async (req, res) => {
 //       res.download(filePath, fileName, () => fs.unlinkSync(filePath));
 //     });
 //   } catch (error) {
-//     res.status(500).json({ success: false, message: error.message });
+//     res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
 //   }
 // };
 
@@ -536,7 +540,7 @@ export const markAttendance = async (req, res) => {
 //     });
 //   } catch (error) {
 //     console.error("PDF Generation Error:", error);
-//     res.status(500).json({ success: false, message: error.message });
+//     res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
 //   }
 // };
 
@@ -731,7 +735,7 @@ Focus on social impact, volunteer engagement, and community value.`,
     });
   } catch (error) {
     console.error("PDF Generation Error:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -767,7 +771,7 @@ Focus on social impact, volunteer engagement, and community value.`,
 
 //     res.json({ success: true, message: "Grace marks assigned", student });
 //   } catch (error) {
-//     res.status(500).json({ success: false, message: error.message });
+//     res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
 //   }
 // };
 
@@ -787,7 +791,7 @@ Focus on social impact, volunteer engagement, and community value.`,
 
 //     res.json({ success: true, message: "Grace marks updated", student });
 //   } catch (error) {
-//     res.status(500).json({ success: false, message: error.message });
+//     res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
 //   }
 // };
 
@@ -805,7 +809,7 @@ Focus on social impact, volunteer engagement, and community value.`,
 
 //     res.json({ success: true, message: "Grace marks deleted", student });
 //   } catch (error) {
-//     res.status(500).json({ success: false, message: error.message });
+//     res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
 //   }
 // };
 
@@ -846,7 +850,8 @@ export const assignGraceMark = async (req, res) => {
 
     res.json({ success: true, message: "Grace marks assigned", student });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("teacherController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -882,7 +887,8 @@ export const updateGraceMark = async (req, res) => {
 
     res.json({ success: true, message: "Event grace mark updated", student });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("teacherController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -910,7 +916,8 @@ export const deleteGraceMark = async (req, res) => {
       student,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("teacherController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -1062,7 +1069,7 @@ export const approveRecommendedGraceMark = async (req, res) => {
     console.error("Approve grace mark error:", error);
     res
       .status(500)
-      .json({ success: false, message: "Server error: " + error.message });
+      .json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -1086,7 +1093,8 @@ export const getAllPendingTeacher = async (req, res) => {
       teachers: pendingTeachers,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("teacherController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -1108,7 +1116,8 @@ export const approveTeacher = async (req, res) => {
       message: "Teacher has been approved successfully",
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("teacherController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -1133,7 +1142,8 @@ export const rejectPendingTeacher = async (req, res) => {
       message: "Teacher has been Rejected successfully",
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("teacherController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -1141,7 +1151,8 @@ export const getAllTeacher = async (req, res) => {
   try {
     const teachers = await Teacher.find()
       .select("-password -otp -otpExpiry") // don’t return sensitive data
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .limit(2000);
 
     res.json({
       success: true,
@@ -1149,7 +1160,8 @@ export const getAllTeacher = async (req, res) => {
       teachers,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("teacherController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -1170,7 +1182,8 @@ export const rejectInDashboardTeacher = async (req, res) => {
       teacher,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("teacherController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -1194,74 +1207,55 @@ export const teacherOverview = async (req, res) => {
       });
     }
 
-    // 🔹 Fetch institution events
-    const institutionEvents = await Event.find({ institution: institutionId });
+    // Counted in the database rather than loaded into memory and filtered in
+    // JS: at institution scale this was pulling every event and every student
+    // into the process just to compute a handful of totals.
+    const assignedFilter = { assignedTeacher: teacherId };
+    const recommendationFilter = {
+      institution: institutionId,
+      "pendingGraceRecommendation.assignedTeachers": teacherId,
+    };
 
-    // 🔹 Fetch events assigned specifically to this teacher
-    const assignedEvents = await Event.find({
-      assignedTeacher: teacherId,
-    }).sort({ createdAt: -1 });
-
-    // 🔹 Event Stats
-    const totalEvents = assignedEvents.length;
-    const completedEvents = assignedEvents.filter(
-      (e) => e.status?.toLowerCase() === "completed"
-    ).length;
-    const upcomingEvents = assignedEvents.filter(
-      (e) => e.status?.toLowerCase() === "upcoming"
-    ).length;
-
-    // 🔹 Students under same institution
-    const students = await Student.find({ institution: institutionId });
-    const totalStudents = students.length;
-    const volunteers = students.filter(
-      (s) => s.role?.toLowerCase() === "volunteer"
-    ).length;
-
-    // 🔹 Grace Mark Recommendations
-    // --- Grace Mark Recommendations ---
-    // --- Grace Mark Recommendations ---
-    const recommendations = students.filter((s) => {
-      const rec = s.pendingGraceRecommendation;
-      if (!rec || !rec.assignedTeachers || !Array.isArray(rec.assignedTeachers))
-        return false;
-
-      // check if teacher is in assignedTeachers array
-      return rec.assignedTeachers.some(
-        (t) => t.toString() === teacherId.toString()
-      );
-    });
-
-    // total recommendation count for this teacher
-    const totalRecommendations = recommendations.length;
-
-    // status-based filtering
-    const pendingRecommendations = recommendations.filter(
-      (s) => s.pendingGraceRecommendation.status?.toLowerCase() === "pending"
-    ).length;
-
-    const approvedRecommendations = recommendations.filter(
-      (s) => s.pendingGraceRecommendation.status?.toLowerCase() === "approved"
-    ).length;
-
-    const rejectedRecommendations = recommendations.filter(
-      (s) => s.pendingGraceRecommendation.status?.toLowerCase() === "rejected"
-    ).length;
+    const [
+      institutionEventCount,
+      totalEvents,
+      completedEvents,
+      upcomingEvents,
+      totalStudents,
+      volunteers,
+      totalRecommendations,
+      pendingRecommendations,
+      approvedRecommendations,
+      rejectedRecommendations,
+      recentEvents,
+    ] = await Promise.all([
+      Event.countDocuments({ institution: institutionId }),
+      Event.countDocuments(assignedFilter),
+      Event.countDocuments({ ...assignedFilter, status: "Completed" }),
+      Event.countDocuments({ ...assignedFilter, status: "Upcoming" }),
+      Student.countDocuments({ institution: institutionId }),
+      Student.countDocuments({ institution: institutionId, role: "volunteer" }),
+      Student.countDocuments(recommendationFilter),
+      Student.countDocuments({
+        ...recommendationFilter,
+        "pendingGraceRecommendation.status": "pending",
+      }),
+      Student.countDocuments({
+        ...recommendationFilter,
+        "pendingGraceRecommendation.status": "approved",
+      }),
+      Student.countDocuments({
+        ...recommendationFilter,
+        "pendingGraceRecommendation.status": "rejected",
+      }),
+      Event.find(assignedFilter)
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .select("title description date location status hours createdAt"),
+    ]);
 
     // 🔹 Grace marks given (approved)
     const graceMarksGiven = approvedRecommendations;
-
-    // 🔹 Recent Events (limit 5)
-    const recentEvents = assignedEvents.slice(0, 5).map((event) => ({
-      _id: event._id,
-      title: event.title,
-      description: event.description,
-      date: event.date,
-      location: event.location,
-      status: event.status,
-      hours: event.hours,
-      createdAt: event.createdAt,
-    }));
 
     // 🔹 Prepare overview response
     const overview = {
@@ -1272,7 +1266,7 @@ export const teacherOverview = async (req, res) => {
       totalEvents,
       completedEvents,
       upcomingEvents,
-      institutionEvents: institutionEvents.length,
+      institutionEvents: institutionEventCount,
       graceMarksGiven,
       graceMarkStats: {
         total: totalRecommendations,
@@ -1292,7 +1286,7 @@ export const teacherOverview = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Server error. Please try again later.",
-      error: error.message,
+      error: "Something went wrong. Please try again.",
     });
   }
 };
@@ -1362,7 +1356,8 @@ export const getMyEvents = async (req, res) => {
 
     res.status(200).json({ success: true, data: formatted });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("teacherController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -1438,7 +1433,7 @@ export const uploadEventImages = async (req, res) => {
     console.error("❌ Error uploading event images:", error);
     return res.status(500).json({
       success: false,
-      message: error.message || "Internal server error",
+      message: "Something went wrong. Please try again." || "Internal server error",
     });
   }
 };
@@ -1490,7 +1485,7 @@ export const editEvent = async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Error editing event:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -1520,7 +1515,7 @@ export const getTeacherProfile = async (req, res) => {
     console.error("Error fetching teacher profile:", error);
     res
       .status(500)
-      .json({ success: false, message: "Server error", error: error.message });
+      .json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -1567,7 +1562,7 @@ export const updateTeacherProfile = async (req, res) => {
     console.error("Error updating teacher profile:", error);
     res
       .status(500)
-      .json({ success: false, message: "Server error", error: error.message });
+      .json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -1595,6 +1590,6 @@ export const getParticipantsOfEvent = async (req, res) => {
     return res.json({ success: true, participants });
   } catch (err) {
     console.error("Error fetching participants:", err);
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };

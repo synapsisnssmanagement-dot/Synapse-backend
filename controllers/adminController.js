@@ -16,9 +16,14 @@ const passwordRegex =
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 
 // token genration
-const generateToken = (id) => {
-  // three part id,token and expire
-  return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+const generateToken = (admin) => {
+  // role is included so authMiddleware doesn't have to guess it by probing
+  // every collection on each request.
+  return jwt.sign(
+    { id: admin._id, role: admin.role || "admin" },
+    process.env.JWT_SECRET,
+    { expiresIn: "7d" }
+  );
 };
 
 // otp genration
@@ -72,7 +77,8 @@ export const signUp = async (req, res) => {
       adminId: admin._id,
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("adminController.js:", error);
+    res.status(500).json({ message: "Something went wrong. Please try again." });
   }
 };
 
@@ -107,7 +113,8 @@ export const updateAdmin = async (req, res) => {
 
     res.json({ success: true, message: "Admin updated sucessfully", admin });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("adminController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -124,7 +131,8 @@ export const deleteAdmin = async (req, res) => {
     }
     res.json({ success: true, message: "Admin updated successfully" });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("adminController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -148,12 +156,13 @@ export const verifyOTP = async (req, res) => {
     admin.otpExpiry = null;
     await admin.save();
 
-    const token = generateToken(admin._id);
+    const token = generateToken(admin);
     res
       .status(201)
       .json({ success: true, message: "successfully verified", token, admin });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("adminController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -182,7 +191,7 @@ export const login = async (req, res) => {
         .status(400)
         .json({ success: false, message: "Invalid credentials" });
 
-    const token = generateToken(admin._id);
+    const token = generateToken(admin);
 
     res.status(200).json({
       success: true,
@@ -191,7 +200,8 @@ export const login = async (req, res) => {
       admin,
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    console.error("adminController.js:", err);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -208,10 +218,11 @@ export const googleCallback = async (req, res) => {
       await admin.save();
     }
 
-    const token = generateToken(admin._id);
+    const token = generateToken(admin);
     res.json({ message: "Google login success", token, admin });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("adminController.js:", error);
+    res.status(500).json({ message: "Something went wrong. Please try again." });
   }
 };
 
@@ -245,7 +256,8 @@ export const createAdminBySuperadmin = async (req, res) => {
 
     res.status(201).json({ message: "Admin created by superadmin", admin });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("adminController.js:", err);
+    res.status(500).json({ message: "Something went wrong. Please try again." });
   }
 };
 
@@ -327,7 +339,7 @@ export const createAdminBySuperadmin = async (req, res) => {
 //       },
 //     });
 //   } catch (error) {
-//     res.status(500).json({ success: false, message: error.message });
+//     res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
 //   }
 // };
 
@@ -468,7 +480,8 @@ export const getDashboardStat = async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("adminController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -485,7 +498,8 @@ export const getAdminProfile = async (req, res) => {
     }
     res.json({ success: true, admin });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("adminController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -521,6 +535,7 @@ export const updateAdminProfile = async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("adminController.js:", error);
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };

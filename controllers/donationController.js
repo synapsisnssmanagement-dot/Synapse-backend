@@ -47,7 +47,7 @@ export const createPaymentIntent = async (req, res) => {
     res.json({ clientSecret: intent.client_secret });
   } catch (error) {
     console.error("❌ STRIPE ERROR:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Something went wrong. Please try again." });
   }
 };
 
@@ -125,6 +125,7 @@ export const getEventDonations = async (req, res) => {
 
     res.json(donations);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error("donationController.js:", error);
+    res.status(500).json({ error: "Something went wrong. Please try again." });
   }
 };

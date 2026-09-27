@@ -138,6 +138,25 @@ app.use("/api/donations", donationRouter);
 app.use("/api/mentorship", mentorshipRouter);
 app.use("/api/mentorshipmessage", mentorshipMessage);
 
+// Unmatched route.
+app.use((req, res) => {
+  res.status(404).json({ success: false, message: "Route not found" });
+});
+
+// Backstop for anything a controller's own try/catch didn't handle (a thrown
+// error passed to next(), a rejected promise in Express 5's auto-catch, or a
+// non-Error thrown value). Individual controllers still catch and log their
+// own errors with more context; this only exists so a gap never leaks a stack
+// trace to the client or crashes the process.
+app.use((err, req, res, next) => {
+  console.error("Unhandled error:", err);
+  if (res.headersSent) return next(err);
+  res.status(err.status || 500).json({
+    success: false,
+    message: "Something went wrong. Please try again.",
+  });
+});
+
 ConnectDb()
   .then(() => {
     console.log("✅ MongoDB connected successfully");

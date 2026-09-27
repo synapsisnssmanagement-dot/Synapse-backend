@@ -29,10 +29,11 @@ export const createInstitution = async (req, res) => {
       data: newInstitution,
     });
   } catch (error) {
+    console.error("institutionController.js:", error);
     res.status(500).json({
       success: false,
       message: "Error creating institution",
-      error: error.message,
+      error: "Something went wrong. Please try again.",
     });
   }
 };
@@ -43,10 +44,11 @@ export const getAllInstitutions = async (req, res) => {
     const institutions = await Institution.find().sort({ createdAt: -1 });
     res.status(200).json({ success: true, institutions });
   } catch (error) {
+    console.error("institutionController.js:", error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch institutions",
-      error: error.message,
+      error: "Something went wrong. Please try again.",
     });
   }
 };
@@ -61,10 +63,11 @@ export const getInstitutionById = async (req, res) => {
         .json({ success: false, message: "Institution not found" });
     res.status(200).json({ success: true, institution });
   } catch (error) {
+    console.error("institutionController.js:", error);
     res.status(500).json({
       success: false,
       message: "Error fetching institution",
-      error: error.message,
+      error: "Something went wrong. Please try again.",
     });
   }
 };
@@ -85,10 +88,11 @@ export const updateInstitution = async (req, res) => {
       .status(200)
       .json({ success: true, message: "Institution updated", institution });
   } catch (error) {
+    console.error("institutionController.js:", error);
     res.status(500).json({
       success: false,
       message: "Error updating institution",
-      error: error.message,
+      error: "Something went wrong. Please try again.",
     });
   }
 };
@@ -105,10 +109,11 @@ export const deleteInstitution = async (req, res) => {
       .status(200)
       .json({ success: true, message: "Institution deleted successfully" });
   } catch (error) {
+    console.error("institutionController.js:", error);
     res.status(500).json({
       success: false,
       message: "Error deleting institution",
-      error: error.message,
+      error: "Something went wrong. Please try again.",
     });
   }
 };

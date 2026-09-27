@@ -28,6 +28,7 @@ const eventSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Institution",
       required: true,
+      index: true,
     },
 
     // event based award
