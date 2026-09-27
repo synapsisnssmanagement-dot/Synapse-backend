@@ -12,7 +12,9 @@ const donationSchema = new mongoose.Schema({
     required: true,
   },
   amount: { type: Number, required: true },
-  paymentId: { type: String, required: true },
+  // Unique so a payment can only ever be recorded once, even if the client
+  // retries or replays the call.
+  paymentId: { type: String, required: true, unique: true },
   message: { type: String, default: "" },
   status: { type: String, default: "succeeded" },
   createdAt: { type: Date, default: Date.now },

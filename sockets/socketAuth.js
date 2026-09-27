@@ -19,7 +19,7 @@ export const socketAuth = async (socket, next) => {
     else if (decoded.role === "coordinator")
       user = await Coordinator.findById(decoded.id).select("name institution");
     else if (decoded.role === "alumni") {
-      user = await Alumni.findById(decoded.id).select("name");
+      user = await Alumni.findById(decoded.id).select("name institution");
     }
 
     if (!user) return next(new Error("User not found"));

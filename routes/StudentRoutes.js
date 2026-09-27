@@ -43,23 +43,29 @@ studentRouter.post("/studentlogin", studentLogin);
 
 studentRouter.post(
   "/admin-student-create",
+  protect,
+  adminOnly,
   upload.single("profileImage"),
   adminCreateStudent
 );
-studentRouter.put("/approve-student/:id", approveStudent);
+studentRouter.put("/approve-student/:id", protect, adminOnly, approveStudent);
 
 // profile
 studentRouter.put(
   "/update-student/:id",
+  protect,
+  adminOnly,
   upload.single("profileImage"),
   studentUpdate
 );
-studentRouter.delete("/delete-student/:id", deleteStudent);
+studentRouter.delete("/delete-student/:id", protect, adminOnly, deleteStudent);
 
 // events
-studentRouter.get("/student-events/:id", getStudentEvents);
+studentRouter.get("/student-events/:id", protect, getStudentEvents);
 studentRouter.delete(
   "/remove-student-event/:studentId/:eventId",
+  protect,
+  adminOnly,
   removeStudentFromEvent
 );
 

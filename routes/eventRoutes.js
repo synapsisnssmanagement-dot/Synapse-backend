@@ -32,13 +32,18 @@ eventRouter.get("/getallevent", getAllevents);
 
 eventRouter.get("/geteventsbyid/:id", getEventById);
 
-eventRouter.delete("/deleteevent/:id", deleteEvent);
+eventRouter.delete("/deleteevent/:id", protect, coordinatorOnly, deleteEvent);
 
-eventRouter.post("/assigntoevent/:id", assignStudentToEvent);
+eventRouter.post(
+  "/assigntoevent/:id",
+  protect,
+  coordinatorOnly,
+  assignStudentToEvent
+);
 
-eventRouter.get("/participantsofevents/:id", getEventParticipants);
+eventRouter.get("/participantsofevents/:id", protect, getEventParticipants);
 
-eventRouter.put("/updateevent/:id", updateEvent);
+eventRouter.put("/updateevent/:id", protect, coordinatorOnly, updateEvent);
 
 eventRouter.post(
   "/:id/uploadimages",
@@ -50,7 +55,12 @@ eventRouter.post(
 
 eventRouter.get("/:id/images", getEventImages);
 
-eventRouter.delete("/:id/images/:imageId", deleteEventImage);
+eventRouter.delete(
+  "/:id/images/:imageId",
+  protect,
+  teacherOnly,
+  deleteEventImage
+);
 
 eventRouter.get("/getalleventimage", getAllEventImages);
 

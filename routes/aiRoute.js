@@ -11,6 +11,6 @@ airouter.post(
   generateEventSummary
 );
 
-airouter.post("/generate", generateAIInsight);
+airouter.post("/generate", protect, coordinatorOnly, generateAIInsight);
 
 export default airouter;

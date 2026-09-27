@@ -65,11 +65,21 @@ teacherRoute.post("/grace-marks", protect, teacherOnly, assignGraceMark);
 
 // gracemark update
 // teacherRoute.put("/grace-marks/:studentId", updateGraceMark);
-teacherRoute.put("/update/:studentId/:eventId", updateGraceMark);
+teacherRoute.put(
+  "/update/:studentId/:eventId",
+  protect,
+  teacherOnly,
+  updateGraceMark
+);
 
 // grace mark delete
 // teacherRoute.delete("/grace-marks/:studentId", deleteGraceMark);
-teacherRoute.delete("/delete/:studentId/:eventId", deleteGraceMark);
+teacherRoute.delete(
+  "/delete/:studentId/:eventId",
+  protect,
+  teacherOnly,
+  deleteGraceMark
+);
 
 
 teacherRoute.get(

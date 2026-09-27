@@ -26,6 +26,7 @@ import donationRouter from "./routes/donationRoutes.js";
 import mentorshipRouter from "./routes/mentorshipRoutes.js";
 import mentorshipMessage from "./routes/mentorshipMessageRoutes.js";
 import MentorshipMessage from "./models/MentorshipMessage.js";
+import Mentorship from "./models/Mentorship.js";
 import { socketAuth } from "./sockets/socketAuth.js";
 
 dotenv.config();
@@ -105,37 +106,54 @@ ConnectDb()
       io.on("connection", (socket) => {
         console.log("🟢 Socket connected:", socket.id, socket.user?.name);
 
+        // Event chat is per-institution, so a socket may only touch rooms
+        // belonging to its own institution.
+        const ownsInstitution = (institutionId) =>
+          Boolean(institutionId) && socket.user?.institution === institutionId;
+
         socket.on("join_room", ({ institutionId, eventId }) => {
-          if (!institutionId || !eventId) return;
-          const room = `institution:${institutionId}:event:${eventId}`;
-          socket.join(room);
+          if (!eventId || !ownsInstitution(institutionId)) {
+            return socket.emit("error_message", "Not allowed to join this room");
+          }
+          socket.join(`institution:${institutionId}:event:${eventId}`);
         });
 
         socket.on("leave_room", ({ institutionId, eventId }) => {
-          const room = `institution:${institutionId}:event:${eventId}`;
-          socket.leave(room);
+          if (!eventId || !institutionId) return;
+          socket.leave(`institution:${institutionId}:event:${eventId}`);
         });
 
         socket.on(
           "send_message",
           async ({ eventId, institutionId, content }) => {
-            if (!eventId || !institutionId || !content) return;
+            if (!eventId || !content) return;
+            if (!ownsInstitution(institutionId)) {
+              return socket.emit(
+                "error_message",
+                "Not allowed to post in this room"
+              );
+            }
 
-            const { default: Message } = await import("./models/Message.js");
+            try {
+              const { default: Message } = await import("./models/Message.js");
 
-            const message = await Message.create({
-              eventId,
-              institutionId,
-              sender: {
-                id: socket.user.id,
-                name: socket.user.name,
-                role: socket.user.role,
-              },
-              content,
-            });
+              const message = await Message.create({
+                eventId,
+                institutionId,
+                sender: {
+                  id: socket.user.id,
+                  name: socket.user.name,
+                  role: socket.user.role,
+                },
+                content,
+              });
 
-            const room = `institution:${institutionId}:event:${eventId}`;
-            io.to(room).emit("new_message", message);
+              const room = `institution:${institutionId}:event:${eventId}`;
+              io.to(room).emit("new_message", message);
+            } catch (err) {
+              console.error("send_message failed:", err.message);
+              socket.emit("error_message", "Could not send message");
+            }
           }
         );
 
@@ -155,22 +173,53 @@ ConnectDb()
     mentorshipIO.on("connection", (socket) => {
       console.log("🟢 Mentorship Chat Connected:", socket.id);
 
-      socket.on("joinMentorship", ({ mentorshipId }) => {
+      // A mentorship thread is private to its mentor and mentee, so membership
+      // is checked against the Mentorship document rather than trusting the id.
+      const isParticipant = async (mentorshipId) => {
+        const mentorship = await Mentorship.findById(mentorshipId).select(
+          "mentor mentee"
+        );
+        if (!mentorship) return false;
+        const me = socket.user.id;
+        return (
+          mentorship.mentor?.toString() === me ||
+          mentorship.mentee?.toString() === me
+        );
+      };
+
+      socket.on("joinMentorship", async ({ mentorshipId }) => {
         if (!mentorshipId) return;
-        socket.join(mentorshipId);
+        try {
+          if (!(await isParticipant(mentorshipId))) {
+            return socket.emit("error_message", "Not part of this mentorship");
+          }
+          socket.join(mentorshipId);
+        } catch (err) {
+          console.error("joinMentorship failed:", err.message);
+          socket.emit("error_message", "Could not join mentorship chat");
+        }
       });
 
       socket.on("sendMentorMessage", async ({ mentorshipId, message }) => {
         if (!mentorshipId || !message) return;
 
-        const savedMessage = await MentorshipMessage.create({
-          mentorship: mentorshipId,
-          senderId: socket.user.id,
-          senderRole: socket.user.role,
-          message,
-        });
+        try {
+          if (!(await isParticipant(mentorshipId))) {
+            return socket.emit("error_message", "Not part of this mentorship");
+          }
 
-        mentorshipIO.to(mentorshipId).emit("newMentorMessage", savedMessage);
+          const savedMessage = await MentorshipMessage.create({
+            mentorship: mentorshipId,
+            senderId: socket.user.id,
+            senderRole: socket.user.role,
+            message,
+          });
+
+          mentorshipIO.to(mentorshipId).emit("newMentorMessage", savedMessage);
+        } catch (err) {
+          console.error("sendMentorMessage failed:", err.message);
+          socket.emit("error_message", "Could not send message");
+        }
       });
 
       socket.on("disconnect", () => {
