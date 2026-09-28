@@ -128,11 +128,15 @@ import jwt from "jsonwebtoken";
 
 const router = express.Router();
 
-// Detect environment
+// NODE_ENV alone isn't reliable here — Render doesn't set it unless the
+// dashboard is explicitly configured to, so this used to silently fall
+// through to the localhost branch in production. FRONTEND_URL is the
+// explicit source of truth; NODE_ENV is only a fallback for local dev.
 const FRONTEND_URL =
-  process.env.NODE_ENV === "production"
+  process.env.FRONTEND_URL ||
+  (process.env.NODE_ENV === "production"
     ? "https://synapsenssmanagement.vercel.app"
-    : "http://localhost:5173";
+    : "http://localhost:5173");
 
 // Step 1: Google login
 router.get(
