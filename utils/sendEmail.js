@@ -1,4 +1,7 @@
 import nodemailer from "nodemailer";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 // Lazy credentials warning (fires once, after dotenv has loaded)
 let _credentialsWarned = false;
@@ -246,6 +249,7 @@ export const sendEmail = async (to, subject, text, buttonLabel = null, buttonLin
     await transporter.sendMail({
       from: `"Synapsis" <${process.env.EMAIL_USER}>`,
       to,
+      replyTo: process.env.EMAIL_USER,
       subject: `${subject} — Synapsis`,
       text,
       html: htmlContent,
