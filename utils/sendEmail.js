@@ -1,14 +1,14 @@
 import nodemailer from "nodemailer";
 
-// Warn once at startup if email credentials are missing (lazy check)
+// Lazy credentials warning (fires once, after dotenv has loaded)
 let _credentialsWarned = false;
 
-// ── Hosted logo URL (Cloudinary) ──
+// ── Hosted logo URL (Cloudinary — light variant, transparent bg) ──
 const LOGO_URL =
-  "https://res.cloudinary.com/dudbh7sex/image/upload/c_fit,h_88,w_88/v1/synapsis-brand/synapsis-email-logo.png";
+  "https://res.cloudinary.com/dudbh7sex/image/upload/c_fit,h_88,w_88/v1/synapsis-brand/synapsis-email-logo-light.png";
 
 /**
- * Build the Synapsis-branded HTML email.
+ * Build the Synapsis-branded HTML email — clean light theme.
  *
  * Smart template: detects OTP codes in `text` and renders them as prominent
  * individual digit boxes.  Falls back to a clean body + optional CTA button
@@ -39,21 +39,20 @@ function buildEmailHtml(subject, text, buttonLabel, buttonLink) {
                 .map(
                   (digit) => `
               <td style="padding: 0 5px;">
-                <div style="
+                <div class="otp-digit" style="
                   width: 48px; height: 60px; line-height: 60px; text-align: center;
                   font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', 'Courier New', monospace;
-                  font-size: 28px; font-weight: 700; color: #10B981;
-                  background: #111827; border: 1.5px solid #1f2937;
+                  font-size: 28px; font-weight: 700; color: #059669;
+                  background: #ecfdf5; border: 1.5px solid #a7f3d0;
                   border-radius: 12px;
-                  box-shadow: 0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04);
                 ">${digit}</div>
               </td>`
                 )
                 .join("")}
             </tr>
           </table>
-          <p style="margin: 18px 0 0; font-size: 13px; color: #6b7280; letter-spacing: 0.04em;">
-            Valid for <strong style="color: #9ca3af;">5 minutes</strong> &middot; Do not share this code
+          <p style="margin: 18px 0 0; font-size: 13px; color: #64748b; letter-spacing: 0.04em;">
+            Valid for <strong style="color: #334155;">5 minutes</strong> &middot; Do not share this code
           </p>
         </td>
       </tr>`
@@ -70,7 +69,6 @@ function buildEmailHtml(subject, text, buttonLabel, buttonLink) {
                display: inline-block; background: #10B981; color: #ffffff;
                text-decoration: none; padding: 14px 40px; border-radius: 10px;
                font-size: 15px; font-weight: 600; letter-spacing: 0.02em;
-               box-shadow: 0 4px 14px rgba(16,185,129,0.35);
              ">
             ${buttonLabel} &#8594;
           </a>
@@ -85,8 +83,8 @@ function buildEmailHtml(subject, text, buttonLabel, buttonLink) {
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="color-scheme" content="dark light"/>
-  <meta name="supported-color-schemes" content="dark light"/>
+  <meta name="color-scheme" content="light"/>
+  <meta name="supported-color-schemes" content="light"/>
   <title>${subject}</title>
   <!--[if mso]>
   <style>table,td{font-family:Arial,Helvetica,sans-serif!important}</style>
@@ -99,7 +97,7 @@ function buildEmailHtml(subject, text, buttonLabel, buttonLink) {
     }
   </style>
 </head>
-<body style="margin:0;padding:0;background-color:#050810;font-family:-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;">
+<body style="margin:0;padding:0;background-color:#f1f5f9;font-family:-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;">
 
   <!-- Preheader -->
   <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">
@@ -107,50 +105,48 @@ function buildEmailHtml(subject, text, buttonLabel, buttonLink) {
   </div>
 
   <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
-         style="background-color:#050810;">
+         style="background-color:#f1f5f9;">
     <tr>
       <td align="center" style="padding:48px 16px 56px;">
 
         <!-- ════════════ MAIN CARD ════════════ -->
         <table role="presentation" cellspacing="0" cellpadding="0" border="0"
                width="520" class="card"
-               style="max-width:520px;width:100%;background:#0f172a;border:1px solid #1e293b;border-radius:20px;overflow:hidden;">
+               style="max-width:520px;width:100%;background:#ffffff;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.06);">
 
-          <!-- ── Top glow bar ── -->
+          <!-- ── Top emerald bar ── -->
           <tr>
-            <td style="height:3px;background:linear-gradient(90deg,#047857,#10B981,#34d399,#10B981,#047857);"></td>
+            <td style="height:4px;background:linear-gradient(90deg,#047857,#10B981,#34d399,#10B981,#047857);"></td>
           </tr>
 
           <!-- ── Header with logo ── -->
           <tr>
-            <td align="center" style="padding:40px 40px 24px;background:#0f172a;">
-              <!-- Logo image (hosted on Cloudinary) -->
-              <img src="${LOGO_URL}" alt="Synapsis" width="64" height="64"
-                   style="display:block;margin:0 auto 20px;border:0;outline:none;" />
-              <!-- Wordmark -->
-              <h1 style="margin:0;font-size:22px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#f1f5f9;">
+            <td align="center" style="padding:40px 40px 24px;background:#ffffff;">
+              <img src="${LOGO_URL}" alt="Synapsis" width="56" height="56"
+                   style="display:block;margin:0 auto 18px;border:0;outline:none;" />
+              <h1 style="margin:0;font-size:22px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#0f172a;">
                 SYNAPSIS
               </h1>
-              <p style="margin:5px 0 0;font-size:10.5px;letter-spacing:0.18em;text-transform:uppercase;color:#64748b;font-weight:600;">
+              <p style="margin:5px 0 0;font-size:10.5px;letter-spacing:0.18em;text-transform:uppercase;color:#94a3b8;font-weight:600;">
                 NSS Management System
               </p>
             </td>
           </tr>
 
-          <!-- ── Emerald divider ── -->
+          <!-- ── Divider ── -->
           <tr>
             <td style="padding:0 48px;">
-              <div style="height:1px;background:linear-gradient(90deg,transparent 0%,#10B981 40%,#10B981 60%,transparent 100%);opacity:0.5;"></div>
+              <div style="height:1px;background:linear-gradient(90deg,transparent 0%,#10B981 40%,#10B981 60%,transparent 100%);opacity:0.35;"></div>
             </td>
           </tr>
 
           <!-- ── Body ── -->
           <tr>
             <td align="center" class="body-cell" style="padding:36px 48px 16px;">
-              <h2 style="margin:0 0 10px;font-size:24px;font-weight:600;color:#f8fafc;line-height:1.3;letter-spacing:-0.02em;">
+              <h2 style="margin:0 0 10px;font-size:24px;font-weight:600;color:#0f172a;line-height:1.3;letter-spacing:-0.02em;">
                 ${subject}
               </h2>
-              <p style="margin:0 0 20px;font-size:15px;line-height:1.7;color:#94a3b8;">
+              <p style="margin:0 0 20px;font-size:15px;line-height:1.7;color:#64748b;">
                 ${bodyText || "Please use the code below to continue."}
               </p>
             </td>
@@ -165,7 +161,7 @@ function buildEmailHtml(subject, text, buttonLabel, buttonLink) {
           <!-- ── Thin divider ── -->
           <tr>
             <td style="padding:0 48px;">
-              <div style="height:1px;background:#1e293b;"></div>
+              <div style="height:1px;background:#e2e8f0;"></div>
             </td>
           </tr>
 
@@ -178,14 +174,14 @@ function buildEmailHtml(subject, text, buttonLabel, buttonLink) {
                   <td valign="middle" style="padding-right:12px;">
                     <div style="
                       width:32px;height:32px;border-radius:50%;
-                      background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.15);
+                      background:#ecfdf5;border:1px solid #a7f3d0;
                       text-align:center;line-height:32px;font-size:15px;
                     ">&#128274;</div>
                   </td>
                   <td valign="middle">
-                    <p style="margin:0;font-size:12px;color:#64748b;line-height:1.6;">
+                    <p style="margin:0;font-size:12px;color:#94a3b8;line-height:1.6;">
                       Didn't request this? Safely ignore this email.<br/>
-                      <span style="color:#475569;">Never share your code with anyone.</span>
+                      <span style="color:#64748b;">Never share your code with anyone.</span>
                     </p>
                   </td>
                 </tr>
@@ -195,8 +191,8 @@ function buildEmailHtml(subject, text, buttonLabel, buttonLink) {
 
           <!-- ── Footer ── -->
           <tr>
-            <td style="background:#0a0f1a;padding:28px 48px;text-align:center;border-top:1px solid #1e293b;">
-              <p style="margin:0 0 8px;font-size:12px;color:#475569;line-height:1.5;">
+            <td style="background:#f8fafc;padding:28px 48px;text-align:center;border-top:1px solid #e2e8f0;">
+              <p style="margin:0 0 8px;font-size:12px;color:#94a3b8;line-height:1.5;">
                 &copy; ${year} <strong style="color:#64748b;">Synapsis</strong>
                 &nbsp;&middot;&nbsp; Built for the National Service Scheme
               </p>
