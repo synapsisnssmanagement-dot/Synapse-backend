@@ -2,8 +2,23 @@
 
 import nodemailer from "nodemailer";
 
+// Warn once at startup if email credentials are missing
+if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+  console.warn(
+    "⚠️  EMAIL_USER or EMAIL_PASS is not set — outbound emails will fail!\n" +
+    "   Set these environment variables in your hosting dashboard (Render, etc.)."
+  );
+}
+
 export const sendEmail = async (to, subject, text, buttonLabel = null, buttonLink = null) => {
   try {
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      throw new Error(
+        "EMAIL_USER or EMAIL_PASS environment variable is not set. " +
+        "Cannot send email. Please configure these in your hosting dashboard."
+      );
+    }
+
     // Create transporter
     const transporter = nodemailer.createTransport({
       service: "gmail",
@@ -83,5 +98,8 @@ export const sendEmail = async (to, subject, text, buttonLabel = null, buttonLin
     console.log(`✅ Email sent successfully to ${to}`);
   } catch (error) {
     console.error("❌ Error sending email:", error.message);
+    // Re-throw so callers can handle it (e.g. return a helpful API error)
+    throw error;
   }
 };
+

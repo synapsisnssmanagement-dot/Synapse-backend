@@ -70,7 +70,7 @@ export const signUp = async (req, res) => {
       status: "pending",
     });
     // otp genrate
-    await sendEmail(email, otp);
+    await sendEmail(email, "Verify your Admin account", `Your OTP is ${otp}`);
     res.status(201).json({
       success: true,
       message: "OTP sent to email",
