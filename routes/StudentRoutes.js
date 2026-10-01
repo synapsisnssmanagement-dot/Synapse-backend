@@ -6,6 +6,7 @@ import {
   approveStudent,
   deleteStudent,
   editStudentProfile,
+  checkInToEvent,
   generateAICertificate,
   generateOwnCertificate,
   getAllStudents,
@@ -124,6 +125,8 @@ studentRouter.get("/my-events", protect, volunteerOnly, getMyEvents);
 
 // protect only, no role gate: any logged-in role can see their institution's leaderboard.
 studentRouter.get("/leaderboard", protect, getLeaderboard);
+
+studentRouter.post("/checkin/:eventId", protect, volunteerOnly, checkInToEvent);
 
 studentRouter.get(
   "/generate/:eventId",

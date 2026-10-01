@@ -1570,6 +1570,44 @@ export const uploadEventImages = async (req, res) => {
   }
 };
 
+// Self check-in by scanning the event's QR code. Only works while the event
+// is live, and only for students already assigned as participants — the QR
+// code saves typing, it doesn't grant attendance to anyone not on the roster.
+export const checkInToEvent = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const studentId = req.user._id;
+
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ success: false, message: "Event not found" });
+    }
+
+    if (event.status !== "Ongoing") {
+      return res.status(400).json({ success: false, message: "Check-in is only open while the event is live" });
+    }
+
+    const isParticipant = event.participants.some((p) => p.toString() === studentId.toString());
+    if (!isParticipant) {
+      return res.status(403).json({ success: false, message: "You're not on this event's roster" });
+    }
+
+    const existing = event.attendance.find((a) => a.student.toString() === studentId.toString());
+    if (existing) {
+      existing.status = "Present";
+      existing.date = new Date();
+    } else {
+      event.attendance.push({ student: studentId, status: "Present" });
+    }
+
+    await event.save();
+    return res.status(200).json({ success: true, message: `Checked in to ${event.title}`, eventTitle: event.title });
+  } catch (error) {
+    console.error("❌ Error checking in:", error);
+    return res.status(500).json({ success: false, message: "Check-in failed" });
+  }
+};
+
 // Top volunteers by credited hours, scoped to the caller's own institution.
 // protect() attaches an institution on every role (student/teacher/coordinator/alumni),
 // so any logged-in user can see their own institution's leaderboard.
