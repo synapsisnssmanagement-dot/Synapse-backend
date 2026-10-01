@@ -2199,7 +2199,10 @@ export const editEvent = async (req, res) => {
     event.title = title || event.title;
     event.description = description || event.description;
     event.location = location || event.location;
-    event.date = date || event.date;
+    if (date && new Date(date).getTime() !== new Date(event.date).getTime()) {
+      event.date = date;
+      event.reminderSent = false; // rescheduled: eligible for a fresh reminder
+    }
     event.hours = hours || event.hours;
     event.status = status || event.status;
     event.images = updatedImage;

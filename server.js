@@ -34,6 +34,7 @@ import donationRouter from "./routes/donationRoutes.js";
 import mentorshipRouter from "./routes/mentorshipRoutes.js";
 import mentorshipMessage from "./routes/mentorshipMessageRoutes.js";
 import publicRouter from "./routes/publicRoutes.js";
+import { scheduleEventReminders } from "./jobs/eventReminders.js";
 import MentorshipMessage from "./models/MentorshipMessage.js";
 import Mentorship from "./models/Mentorship.js";
 import { socketAuth } from "./sockets/socketAuth.js";
@@ -305,6 +306,7 @@ ConnectDb()
 
     server.listen(port, () => {
       console.log(`🚀 Server running on port ${port}`);
+      scheduleEventReminders();
     });
   })
   .catch((error) => {

@@ -17,6 +17,7 @@ import {
   protect,
   superAdminOnly,
 } from "../middleware/authMiddleware.js";
+import { sendEventReminders } from "../jobs/eventReminders.js";
 
 const router = express.Router();
 
@@ -29,6 +30,17 @@ router.delete("/deleteadmin/:id", protect, superAdminOnly, deleteAdmin);
 
 // dashboard data
 router.get("/dashboardata", protect, adminOnly, getDashboardStat);
+
+// Runs daily at 8am automatically; this lets an admin trigger it on demand too.
+router.post("/send-event-reminders", protect, adminOnly, async (req, res) => {
+  try {
+    const result = await sendEventReminders();
+    res.json({ success: true, ...result });
+  } catch (error) {
+    console.error("Manual event reminder trigger failed:", error);
+    res.status(500).json({ success: false, message: "Could not send reminders" });
+  }
+});
 
 // // Step 1: Google login
 // router.get(

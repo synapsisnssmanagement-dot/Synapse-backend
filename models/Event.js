@@ -24,6 +24,11 @@ const eventSchema = new mongoose.Schema(
       default: 0,
     },
 
+    reminderSent: {
+      type: Boolean,
+      default: false,
+    },
+
     donationOpen: {
       type: Boolean,
       default: true,

@@ -9,6 +9,7 @@ import Event from "../models/Event.js";
 import Teacher from "../models/Teacher.js";
 import Coordinator from "../models/Coordinator.js";
 import Alumni from "../models/Alumni.js";
+import Donation from "../models/Donation.js";
 
 // regex
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -440,6 +441,35 @@ export const getDashboardStat = async (req, res) => {
     });
     const upcomingEvents = await Event.countDocuments({ status: "Upcoming" });
 
+    // ======= Hours contributed =======
+    const hoursAgg = await Student.aggregate([
+      { $group: { _id: null, total: { $sum: "$totalVolunteerHours" } } },
+    ]);
+    const totalHours = hoursAgg[0]?.total || 0;
+
+    // ======= Donations =======
+    const donationAgg = await Donation.aggregate([
+      { $group: { _id: null, total: { $sum: "$amount" }, count: { $sum: 1 } } },
+    ]);
+    const donationTrendRaw = await Donation.aggregate([
+      { $match: { createdAt: { $gte: sevenDaysAgo } } },
+      {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+          amount: { $sum: "$amount" },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+    const filledDonationTrend = [];
+    for (let i = 0; i < 7; i += 1) {
+      const date = new Date(sevenDaysAgo);
+      date.setDate(sevenDaysAgo.getDate() + i);
+      const formatted = date.toISOString().split("T")[0];
+      const found = donationTrendRaw.find((d) => d._id === formatted);
+      filledDonationTrend.push({ date: formatted, amount: found ? found.amount : 0 });
+    }
+
     // ======= Response =======
     res.json({
       success: true,
@@ -476,6 +506,14 @@ export const getDashboardStat = async (req, res) => {
           total: totalEvents,
           completed: totalCompletedEvent,
           upcoming: upcomingEvents,
+        },
+        hours: {
+          total: totalHours,
+        },
+        donation: {
+          total: donationAgg[0]?.total || 0,
+          count: donationAgg[0]?.count || 0,
+          trend: filledDonationTrend,
         },
       },
     });
