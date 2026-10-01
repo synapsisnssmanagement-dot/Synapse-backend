@@ -2655,3 +2655,37 @@ export const toggleDonation = async (req, res) => {
     });
   }
 };
+
+export const setDonationGoal = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const { goal } = req.body;
+
+    if (typeof goal !== "number" || !Number.isFinite(goal) || goal < 0) {
+      return res.status(400).json({ success: false, message: "Goal must be a non-negative number" });
+    }
+
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    if (denyCrossInstitution(req, res, event)) return;
+
+    event.donationGoal = goal;
+    await event.save();
+
+    return res.json({
+      success: true,
+      message: "Donation goal updated",
+      donationGoal: event.donationGoal,
+    });
+  } catch (error) {
+    console.error("coordinatorController.js:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server Error",
+      error: "Something went wrong. Please try again.",
+    });
+  }
+};

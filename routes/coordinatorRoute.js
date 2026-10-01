@@ -24,6 +24,7 @@ import {
   rejectInDashboardCoordinator,
   studentToVolunteer,
   toggleDonation,
+  setDonationGoal,
   unassignTeacherFromEvent,
   unassignVolunteerFromEvent,
   updateCoordinatorProfile,
@@ -215,6 +216,7 @@ coordinatorRoute.get(
 
 // toggle donation
 coordinatorRoute.put("/toggle-donation/:eventId", protect, coordinatorOnly, toggleDonation);
+coordinatorRoute.put("/donation-goal/:eventId", protect, coordinatorOnly, setDonationGoal);
 
 // ✅ Update profile (with optional file upload)
 coordinatorRoute.put(

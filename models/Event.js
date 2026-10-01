@@ -19,6 +19,11 @@ const eventSchema = new mongoose.Schema(
       default: 0,
     },
 
+    donationGoal: {
+      type: Number,
+      default: 0,
+    },
+
     donationOpen: {
       type: Boolean,
       default: true,
