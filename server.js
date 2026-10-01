@@ -33,6 +33,7 @@ import notificationRoute from "./routes/notificationRoutes.js";
 import donationRouter from "./routes/donationRoutes.js";
 import mentorshipRouter from "./routes/mentorshipRoutes.js";
 import mentorshipMessage from "./routes/mentorshipMessageRoutes.js";
+import publicRouter from "./routes/publicRoutes.js";
 import MentorshipMessage from "./models/MentorshipMessage.js";
 import Mentorship from "./models/Mentorship.js";
 import { socketAuth } from "./sockets/socketAuth.js";
@@ -136,6 +137,7 @@ app.use("/api/ai", airouter);
 app.use("/api/notification", notificationRoute);
 app.use("/api/donations", donationRouter);
 app.use("/api/mentorship", mentorshipRouter);
+app.use("/api/public", publicRouter);
 app.use("/api/mentorshipmessage", mentorshipMessage);
 
 // Unmatched route.
