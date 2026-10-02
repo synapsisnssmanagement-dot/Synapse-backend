@@ -1,4 +1,5 @@
 import Mentorship from "../models/Mentorship.js";
+import mongoose from "mongoose";
 import Alumni from "../models/Alumni.js";
 import Student from "../models/Student.js";
 
@@ -241,7 +242,7 @@ export const getAllMenteeFeedback = async (req, res) => {
     const mentorships = await Mentorship.find({
       mentor: mentorId,
       status: "completed",
-      "menteeFeedback.rating": { $exists: true }
+      "menteeFeedback.rating": mongoose.trusted({ $exists: true })
     })
       .populate("mentee", "name email")
       .populate("mentor", "name email")

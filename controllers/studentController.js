@@ -1,4 +1,5 @@
 import Student from "../models/Student.js";
+import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import cloudinary from "../utils/cloudinary.js";
 import { sendEmail } from "../utils/sendEmail.js";
@@ -10,6 +11,8 @@ import PDFDocument from "pdfkit";
 import { count } from "console";
 import Institution from "../models/Institution.js";
 import Certificate from "../models/Certificate.js";
+import { emitToInstitution } from "../sockets/io.js";
+import { distanceMetres } from "../utils/nss.js";
 import crypto from "crypto";
 import Groq from "groq-sdk";
 import { HfInference } from "@huggingface/inference";
@@ -973,7 +976,7 @@ export const getFilteredStudentEvents = async (req, res) => {
     if (teacherId) query.assignedTeacher = teacherId;
     if (coordinatorId) query.assignedCoordinators = coordinatorId;
     if (startDate && endDate) {
-      query.date = { $gte: new Date(startDate), $lte: new Date(endDate) };
+      query.date = mongoose.trusted({ $gte: new Date(startDate), $lte: new Date(endDate) });
     }
 
     const events = await Event.find(query)
@@ -1146,7 +1149,7 @@ export const getMyEvents = async (req, res) => {
     // populateOptions.push({ path: "coordinator", select: "name email" });
 
     const events = await Event.find({
-      _id: { $in: student.assignedEvents },
+      _id: mongoose.trusted({ $in: student.assignedEvents }),
     })
       .populate(populateOptions)
       .sort({ date: -1 });
@@ -1594,6 +1597,27 @@ export const checkInToEvent = async (req, res) => {
       return res.status(403).json({ success: false, message: "You're not on this event's roster" });
     }
 
+    // With a venue pin set, the phone has to be at the venue: this is what
+    // stops one student checking in absent friends from the hostel.
+    let distance = null;
+    if (event.geo?.lat != null && event.geo?.lng != null) {
+      const lat = Number(req.body?.lat);
+      const lng = Number(req.body?.lng);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        return res.status(400).json({ success: false, code: "LOCATION_REQUIRED", message: "Allow location access to check in to this event" });
+      }
+      const accuracy = Math.min(Number(req.body?.accuracy) || 0, 200);
+      distance = Math.round(distanceMetres({ lat, lng }, event.geo));
+      if (distance > (event.geo.radius || 300) + accuracy) {
+        return res.status(403).json({
+          success: false,
+          code: "TOO_FAR",
+          distance,
+          message: `You're about ${distance >= 1000 ? `${(distance / 1000).toFixed(1)} km` : `${distance} m`} from the venue. Check in when you're there.`,
+        });
+      }
+    }
+
     const existing = event.attendance.find((a) => a.student.toString() === studentId.toString());
     if (existing) {
       existing.status = "Present";
@@ -1603,7 +1627,11 @@ export const checkInToEvent = async (req, res) => {
     }
 
     await event.save();
-    return res.status(200).json({ success: true, message: `Checked in to ${event.title}`, eventTitle: event.title });
+    emitToInstitution(event.institution, "event:attendance", {
+      eventId: String(event._id),
+      updates: [{ studentId: String(studentId), status: "Present", at: new Date(), via: "qr" }],
+    });
+    return res.status(200).json({ success: true, message: `Checked in to ${event.title}`, eventTitle: event.title, distance });
   } catch (error) {
     console.error("❌ Error checking in:", error);
     return res.status(500).json({ success: false, message: "Check-in failed" });

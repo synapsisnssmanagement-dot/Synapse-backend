@@ -34,6 +34,7 @@ import donationRouter from "./routes/donationRoutes.js";
 import mentorshipRouter from "./routes/mentorshipRoutes.js";
 import mentorshipMessage from "./routes/mentorshipMessageRoutes.js";
 import publicRouter from "./routes/publicRoutes.js";
+import nssRouter from "./routes/nssRoutes.js";
 import { scheduleEventReminders } from "./jobs/eventReminders.js";
 import { setIo } from "./sockets/io.js";
 import MentorshipMessage from "./models/MentorshipMessage.js";
@@ -141,6 +142,7 @@ app.use("/api/notification", notificationRoute);
 app.use("/api/donations", donationRouter);
 app.use("/api/mentorship", mentorshipRouter);
 app.use("/api/public", publicRouter);
+app.use("/api/nss", nssRouter);
 app.use("/api/mentorshipmessage", mentorshipMessage);
 
 // Unmatched route.

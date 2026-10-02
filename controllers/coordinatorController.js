@@ -13,6 +13,8 @@ import Institution from "../models/Institution.js";
 import { denyCrossInstitution } from "../utils/ownership.js";
 import { HfInference } from "@huggingface/inference";
 import Notification from "../models/Notification.js";
+import CommunityRequest from "../models/CommunityRequest.js";
+import mongoose from "mongoose";
 import Groq from "groq-sdk";
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
@@ -197,7 +199,7 @@ export const Login = async (req, res) => {
 // create event
 export const createEvent = async (req, res) => {
   try {
-    const { title, description, location, date, hours } = req.body;
+    const { title, description, location, date, hours, type, endDate, requiredSkills, requestId } = req.body;
     if (!title || !description || !location || !date || !hours) {
       return res
         .status(400)
@@ -217,6 +219,20 @@ export const createEvent = async (req, res) => {
         .status(400)
         .json({ success: false, message: "Hours must be a number between 1 and 24" });
     }
+
+    const eventType = type === "special_camp" ? "special_camp" : "regular";
+    let parsedEnd;
+    if (endDate) {
+      parsedEnd = new Date(endDate);
+      if (Number.isNaN(parsedEnd.getTime()) || parsedEnd < parsedDate) {
+        return res.status(400).json({ success: false, message: "End date must be on or after the start date" });
+      }
+    }
+    // Multipart forms send arrays as a comma-separated string.
+    const skills = (Array.isArray(requiredSkills) ? requiredSkills : String(requiredSkills || "").split(","))
+      .map((s) => String(s).trim())
+      .filter(Boolean)
+      .slice(0, 12);
 
     // fetch coordinator
     const coordinator = await Coordinator.findById(req.user._id);
@@ -268,7 +284,23 @@ export const createEvent = async (req, res) => {
       createdBy: req.user._id,
       images: imageData ? [imageData] : [],
       status: "Upcoming",
+      type: eventType,
+      endDate: parsedEnd,
+      requiredSkills: skills,
     });
+
+    // Created from a community request: link the two and mark it accepted.
+    if (requestId && mongoose.isValidObjectId(requestId)) {
+      const request = await CommunityRequest.findOneAndUpdate(
+        { _id: requestId, institution: institutionId },
+        { status: "accepted", event: newEvent._id },
+        { new: true }
+      );
+      if (request) {
+        newEvent.communityRequest = request._id;
+        await newEvent.save();
+      }
+    }
 
     await Institution.findByIdAndUpdate(institutionId, {
       $push: { Events: newEvent._id },
@@ -474,7 +506,9 @@ export const getStudentBySkill = async (req, res) => {
 
     const students = await Student.find({
       // $regex is a mongodb query for matching the skill
-      talents: { $regex: `^${skills}$`, $options: "i" }, // exact-ish match; adjust as needed
+      // Server-built operator, so it is marked trusted for sanitizeFilter; the
+      // user's text is escaped so it can only ever match literally.
+      talents: mongoose.trusted({ $regex: `^${String(skills).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" }),
       role: "student",
       status: "active",
       institution: coordinator.institution,
@@ -582,7 +616,7 @@ export const assignVoulnteerToEvent = async (req, res) => {
 
     // ensure the provided id is volunteer and from same institution
     const volunteer = await Student.find({
-      _id: { $in: volunteerIds },
+      _id: mongoose.trusted({ $in: volunteerIds }),
       role: "volunteer",
       status: "active",
       institution: coordinator.institution,
@@ -604,7 +638,7 @@ export const assignVoulnteerToEvent = async (req, res) => {
 
     // also add assigned event to each student's assignedEvents
     await Student.updateMany(
-      { _id: { $in: volunteerObjectIds } },
+      { _id: mongoose.trusted({ $in: volunteerObjectIds }) },
       { $addToSet: { assignedEvents: event._id } }
     );
 
@@ -2434,7 +2468,7 @@ export const unassignVolunteerFromEvent = async (req, res) => {
 
     // Ensure the volunteers are valid and belong to the same institution
     const volunteers = await Student.find({
-      _id: { $in: volunteerIds },
+      _id: mongoose.trusted({ $in: volunteerIds }),
       role: "volunteer",
       institution: coordinator.institution,
     });
@@ -2455,7 +2489,7 @@ export const unassignVolunteerFromEvent = async (req, res) => {
 
     // Remove event from volunteers' assignedEvents
     await Student.updateMany(
-      { _id: { $in: volunteerIds } },
+      { _id: mongoose.trusted({ $in: volunteerIds }) },
       { $pull: { assignedEvents: eventId } }
     );
 

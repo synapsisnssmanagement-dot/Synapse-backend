@@ -1,4 +1,5 @@
 // import Alumni from "../models/Alumni.js";
+import { emitToInstitution } from "../sockets/io.js";
 import Alumni from "../models/Alumni.js";
 import Event from "../models/Event.js";
 import Student from "../models/Student.js";
@@ -328,6 +329,7 @@ export const startEvent = async (req, res) => {
     event.startTime = new Date();
 
     await event.save();
+    emitToInstitution(event.institution, "event:status", { eventId: String(event._id), status: event.status });
 
     res.status(200).json({
       success: true,
@@ -376,32 +378,19 @@ export const completeEvent = async (req, res) => {
         if (student) {
           student.totalVolunteerHours += parseFloat(event.calculatedHours);
 
-          // Assign awards/levels
+          // Level up, and award a badge only when the level actually changes
+          // (this used to push a duplicate award on every completed event).
           const hours = student.totalVolunteerHours;
-          if (hours >= 50) {
-            student.level = "Platinum";
-            student.awards.push({
-              title: "Platinum Volunteer",
-              description: "Completed 50 hours",
-            });
-          } else if (hours >= 26) {
-            student.level = "Gold";
-            student.awards.push({
-              title: "Gold Volunteer",
-              description: "Completed 26 hours",
-            });
-          } else if (hours >= 11) {
-            student.level = "Silver";
-            student.awards.push({
-              title: "Silver Volunteer",
-              description: "Completed 11 hours",
-            });
-          } else if (hours > 0) {
-            student.level = "Bronze";
-            student.awards.push({
-              title: "Bronze Volunteer",
-              description: "Started volunteering",
-            });
+          const level = hours >= 50 ? "Platinum" : hours >= 26 ? "Gold" : hours >= 11 ? "Silver" : hours > 0 ? "Bronze" : null;
+          const AWARDS = {
+            Platinum: "Completed 50 hours",
+            Gold: "Completed 26 hours",
+            Silver: "Completed 11 hours",
+            Bronze: "Started volunteering",
+          };
+          if (level && student.level !== level) {
+            student.level = level;
+            student.awards.push({ title: `${level} Volunteer`, description: AWARDS[level] });
           }
 
           await student.save();
@@ -410,6 +399,7 @@ export const completeEvent = async (req, res) => {
     }
 
     await event.save();
+    emitToInstitution(event.institution, "event:status", { eventId: String(event._id), status: event.status });
 
     res.status(200).json({
       success: true,

@@ -1,4 +1,5 @@
 import cron from "node-cron";
+import mongoose from "mongoose";
 import Event from "../models/Event.js";
 import { sendEmail } from "../utils/sendEmail.js";
 
@@ -15,8 +16,9 @@ export async function sendEventReminders() {
   end.setHours(23, 59, 59, 999);
 
   const events = await Event.find({
-    date: { $gte: start, $lte: end },
-    status: { $in: ["Upcoming", "Ongoing"] },
+    // Server-built operators must be marked trusted (sanitizeFilter is on).
+    date: mongoose.trusted({ $gte: start, $lte: end }),
+    status: mongoose.trusted({ $in: ["Upcoming", "Ongoing"] }),
     reminderSent: false,
   })
     .populate("participants", "name email")

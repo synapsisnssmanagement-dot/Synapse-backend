@@ -13,6 +13,7 @@ import Coordinator from "../models/Coordinator.js";
 import { HfInference } from "@huggingface/inference";
 import Groq from "groq-sdk";
 import { denyCrossInstitution } from "../utils/ownership.js";
+import { emitToInstitution } from "../sockets/io.js";
 
 // Grace marks affect a student's academic record, so a non-numeric or
 // out-of-range value must be rejected rather than stored as NaN.
@@ -285,6 +286,10 @@ export const markAttendance = async (req, res) => {
     });
 
     await event.save();
+    emitToInstitution(event.institution, "event:attendance", {
+      eventId: String(event._id),
+      updates: attendanceList.map(({ studentId, status }) => ({ studentId: String(studentId), status, at: new Date(), via: "teacher" })),
+    });
     res.json({
       success: true,
       message: "Attendance updated",
