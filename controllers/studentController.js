@@ -1051,6 +1051,8 @@ export const getFilteredStudentEvents = async (req, res) => {
     const formattedEvents = events.map((ev) => ({
       id: ev._id,
       title: ev.title,
+      type: ev.type || "regular",
+      endDate: ev.endDate || null,
       description: ev.description,
       date: ev.date,
       status: ev.status,

@@ -1351,6 +1351,8 @@ export const getMyEvents = async (req, res) => {
     const formatted = events.map((e) => ({
       _id: e._id,
       title: e.title,
+      type: e.type || "regular",
+      endDate: e.endDate || null,
       date: e.date,
       description: e.description,
       location: e.location,

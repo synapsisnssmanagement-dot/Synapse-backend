@@ -14,6 +14,8 @@ import {
   academicYearLabel,
   academicYearOf,
   computeEligibility,
+  creditedHours,
+  creditedStudentIds,
   rankVolunteers,
 } from "../utils/nss.js";
 import { denyCrossInstitution } from "../utils/ownership.js";
@@ -24,7 +26,7 @@ const fail = (res, error, message = "Something went wrong. Please try again.") =
 };
 
 const completedEvents = (institution) =>
-  Event.find({ institution, status: "Completed" }).select("title date type calculatedHours attendance campDays").lean();
+  Event.find({ institution, status: "Completed" }).select("title date endDate type hours calculatedHours attendance campDays").lean();
 
 const loadOwnEvent = async (req, res, select) => {
   if (!mongoose.isValidObjectId(req.params.eventId)) {
@@ -369,7 +371,7 @@ export const getPublicImpact = async (req, res) => {
     if (!institution) return res.status(404).json({ success: false, message: "Institution not found" });
 
     const events = await Event.find({ institution: institutionId, status: "Completed" })
-      .select("title date location type impact calculatedHours attendance images")
+      .select("title date endDate location type impact hours calculatedHours attendance campDays images")
       .sort({ date: -1 })
       .lean();
 
@@ -377,9 +379,10 @@ export const getPublicImpact = async (req, res) => {
     let hours = 0;
     const volunteers = new Set();
     for (const e of events) {
-      const present = (e.attendance || []).filter((a) => a.status === "Present");
-      present.forEach((a) => volunteers.add(String(a.student)));
-      hours += (Number(e.calculatedHours) || 0) * present.length;
+      for (const id of creditedStudentIds(e)) {
+        volunteers.add(id);
+        hours += creditedHours(e, id);
+      }
       for (const i of e.impact || []) {
         const key = `${i.metric.toLowerCase()}|${(i.unit || "").toLowerCase()}`;
         const t = totals.get(key) || { metric: i.metric, unit: i.unit, value: 0 };
@@ -402,7 +405,7 @@ export const getPublicImpact = async (req, res) => {
         type: e.type,
         impact: e.impact || [],
         cover: e.images?.[0]?.url || null,
-        volunteers: (e.attendance || []).filter((a) => a.status === "Present").length,
+        volunteers: creditedStudentIds(e).size,
       })),
     });
   } catch (error) {
@@ -422,7 +425,7 @@ export const annualReport = async (req, res) => {
     const [institution, events, volunteers] = await Promise.all([
       Institution.findById(institutionId).select("name address").lean(),
       Event.find({ institution: institutionId, date: mongoose.trusted({ $gte: from, $lt: to }) })
-        .select("title date location type status calculatedHours attendance participants impact campDays")
+        .select("title date endDate location type status hours calculatedHours attendance participants impact campDays")
         .sort({ date: 1 })
         .lean(),
       Student.find({ institution: institutionId, role: "volunteer" }).select("name department").lean(),
@@ -437,10 +440,8 @@ export const annualReport = async (req, res) => {
     const active = new Set();
     let totalHours = 0;
     for (const e of completed) {
-      const h = Number(e.calculatedHours) || 0;
-      for (const a of e.attendance || []) {
-        if (a.status !== "Present") continue;
-        const id = String(a.student);
+      for (const id of creditedStudentIds(e)) {
+        const h = creditedHours(e, id);
         active.add(id);
         yearHours.set(id, (yearHours.get(id) || 0) + h);
         totalHours += h;
@@ -513,7 +514,7 @@ export const annualReport = async (req, res) => {
     if (events.length) {
       for (const e of events) {
         if (doc.y > doc.page.height - 90) doc.addPage();
-        const present = (e.attendance || []).filter((a) => a.status === "Present").length;
+        const present = creditedStudentIds(e).size;
         const line = `${new Date(e.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}  ${e.title}${e.type === "special_camp" ? " (special camp)" : ""}`;
         doc.fillColor(ink).font("Helvetica-Bold").fontSize(10.5).text(line);
         doc

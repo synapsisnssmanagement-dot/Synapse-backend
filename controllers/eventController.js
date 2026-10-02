@@ -1,5 +1,7 @@
 // import Alumni from "../models/Alumni.js";
 import { emitToInstitution } from "../sockets/io.js";
+import { denyCrossInstitution } from "../utils/ownership.js";
+import { creditedHours, creditedStudentIds } from "../utils/nss.js";
 import Alumni from "../models/Alumni.js";
 import Event from "../models/Event.js";
 import Student from "../models/Student.js";
@@ -182,13 +184,15 @@ export const getEventParticipants = async (req, res) => {
   try {
     const events = await Event.findById(req.params.id).populate(
       "participants",
-      "name email department"
+      "name email department talents"
     );
     if (!events) {
       return res
         .status(404)
         .json({ success: false, message: "Event not found" });
     }
+    // Names and emails of another college's volunteers aren't ours to show.
+    if (denyCrossInstitution(req, res, events)) return;
     res.json({ success: true, participants: events.participants });
   } catch (error) {
     console.error("eventController.js:", error);
@@ -371,12 +375,15 @@ export const completeEvent = async (req, res) => {
       (1000 * 60 * 60)
     ).toFixed(2);
 
-    // Update volunteer students
-    for (const att of event.attendance) {
-      if (att.status === "Present") {
-        const student = await Student.findById(att.student._id);
+    // Credit volunteers. Camps credit per roll-call day rather than elapsed
+    // time (see creditedHours); regular drives credit everyone marked Present.
+    const credited = [...creditedStudentIds(event)];
+    for (const studentId of credited) {
+      const earned = creditedHours(event, studentId);
+      if (earned > 0) {
+        const student = await Student.findById(studentId);
         if (student) {
-          student.totalVolunteerHours += parseFloat(event.calculatedHours);
+          student.totalVolunteerHours += earned;
 
           // Level up, and award a badge only when the level actually changes
           // (this used to push a duplicate award on every completed event).

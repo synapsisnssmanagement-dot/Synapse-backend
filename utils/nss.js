@@ -35,8 +35,35 @@ export const attendedCamp = (event, studentId) => {
   return attended >= Math.ceil(days.length / 2);
 };
 
+// Hours one student earns from one completed event. A regular drive credits
+// the time it actually ran to everyone marked Present. A multi-day camp
+// can't use elapsed time (start-to-complete spans nights), so it credits the
+// planned hours per day for each day the student was on the roll call.
+export const creditedHours = (event, studentId) => {
+  const id = String(studentId);
+  if (event.type === "special_camp") {
+    const perDay = Number(event.hours) || 0;
+    const days = event.campDays || [];
+    if (days.length) return perDay * days.filter((d) => (d.present || []).some((p) => String(p) === id)).length;
+    if (!presentIds(event).has(id)) return 0;
+    const start = new Date(event.date);
+    const end = new Date(event.endDate || event.date);
+    const span = Math.max(1, Math.round((end.setHours(0, 0, 0, 0) - start.setHours(0, 0, 0, 0)) / 86400000) + 1);
+    return perDay * span;
+  }
+  return presentIds(event).has(id) ? Number(event.calculatedHours) || 0 : 0;
+};
+
+// Everyone who earned hours from an event (roll call for camps).
+export const creditedStudentIds = (event) => {
+  if (event.type === "special_camp" && (event.campDays || []).length) {
+    return new Set(event.campDays.flatMap((d) => (d.present || []).map(String)));
+  }
+  return presentIds(event);
+};
+
 // events: the institution's Completed events (attendance, campDays, date,
-// calculatedHours, type). Returns Map<studentId, summary>.
+// endDate, hours, calculatedHours, type). Returns Map<studentId, summary>.
 export const computeEligibility = (studentIds, events, now = new Date()) => {
   const currentYear = academicYearOf(now);
   const byStudent = new Map(
@@ -44,11 +71,10 @@ export const computeEligibility = (studentIds, events, now = new Date()) => {
   );
 
   for (const event of events) {
-    const hours = Number(event.calculatedHours) || 0;
     const year = academicYearOf(event.date);
-    const present = presentIds(event);
     for (const [id, s] of byStudent) {
-      if (present.has(id) && hours > 0) {
+      const hours = creditedHours(event, id);
+      if (hours > 0) {
         s.total += hours;
         s.years[year] = (s.years[year] || 0) + hours;
         if (year === currentYear) s.currentYear += hours;
