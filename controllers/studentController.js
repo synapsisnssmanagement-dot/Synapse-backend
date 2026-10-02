@@ -49,6 +49,7 @@ export const studentSignUp = async (req, res) => {
       talents,
       password,
       institution,
+      role,
     } = req.body;
 
     if (!name || !email || !phoneNumber || !department || !password || !institution) {
@@ -101,6 +102,7 @@ export const studentSignUp = async (req, res) => {
       status: "pending",
       profileImage,
       institution,
+      role: role === "volunteer" ? "volunteer" : "student",
     });
 
     await Institution.findByIdAndUpdate(institution, {
