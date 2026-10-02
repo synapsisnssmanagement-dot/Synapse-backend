@@ -35,6 +35,7 @@ import mentorshipRouter from "./routes/mentorshipRoutes.js";
 import mentorshipMessage from "./routes/mentorshipMessageRoutes.js";
 import publicRouter from "./routes/publicRoutes.js";
 import { scheduleEventReminders } from "./jobs/eventReminders.js";
+import { setIo } from "./sockets/io.js";
 import MentorshipMessage from "./models/MentorshipMessage.js";
 import Mentorship from "./models/Mentorship.js";
 import { socketAuth } from "./sockets/socketAuth.js";
@@ -112,6 +113,7 @@ app.use(passport.session());
 // API Routes
 // Strict limits on credential-guessing surfaces. These must come before the
 // routers so they run first.
+app.use("/api/auth/login", authLimiter);
 app.use("/api/admin/login", authLimiter);
 app.use("/api/admin/verify-otp", authLimiter);
 app.use("/api/students/studentlogin", authLimiter);
@@ -176,12 +178,15 @@ ConnectDb()
     });
 
     app.set("io", io);
+    setIo(io);
 
     import("./sockets/socketAuth.js").then(({ socketAuth }) => {
       io.use(socketAuth);
 
       io.on("connection", (socket) => {
         console.log("🟢 Socket connected:", socket.id, socket.user?.name);
+        socket.join(`user:${socket.user.id}`);
+        if (socket.user.institution) socket.join(`institution:${socket.user.institution}`);
 
         // Event chat is per-institution, so a socket may only touch rooms
         // belonging to its own institution.

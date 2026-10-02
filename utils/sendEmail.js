@@ -218,7 +218,40 @@ function buildEmailHtml(subject, text, buttonLabel, buttonLink) {
 </html>`;
 }
 
+// Brevo's HTTPS API (port 443). Render's free tier blocks outbound SMTP
+// ports, so Gmail SMTP works locally but silently fails in production; an
+// HTTP email API sidesteps that. Needs BREVO_API_KEY plus a sender address
+// verified in Brevo (EMAIL_FROM, falling back to EMAIL_USER).
+async function sendViaBrevo(to, subject, text, html) {
+  const from = process.env.EMAIL_FROM || process.env.EMAIL_USER;
+  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: { "api-key": process.env.BREVO_API_KEY, "content-type": "application/json", accept: "application/json" },
+    body: JSON.stringify({
+      sender: { name: "Synapsis", email: from },
+      to: [{ email: to }],
+      subject: `${subject} — Synapsis`,
+      textContent: text,
+      htmlContent: html,
+    }),
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    throw new Error(`Brevo rejected the email (${res.status}): ${detail.slice(0, 300)}`);
+  }
+}
+
 export const sendEmail = async (to, subject, text, buttonLabel = null, buttonLink = null) => {
+  if (process.env.BREVO_API_KEY) {
+    try {
+      await sendViaBrevo(to, subject, text, buildEmailHtml(subject, text, buttonLabel, buttonLink));
+      console.log(`✅ Email sent via Brevo to ${to}`);
+      return;
+    } catch (error) {
+      console.error("❌ Brevo send failed, trying SMTP:", error.message);
+    }
+  }
+
   try {
     // Lazy warning (fires once, after dotenv has loaded)
     if (!_credentialsWarned && (!process.env.EMAIL_USER || !process.env.EMAIL_PASS)) {
@@ -238,6 +271,9 @@ export const sendEmail = async (to, subject, text, buttonLabel = null, buttonLin
 
     const transporter = nodemailer.createTransport({
       service: "gmail",
+      // Fail fast when the host blocks SMTP instead of hanging for minutes.
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,

@@ -125,8 +125,13 @@
 import express from "express";
 import passport from "passport";
 import jwt from "jsonwebtoken";
+import { getMe, unifiedLogin } from "../controllers/authController.js";
+import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
+
+router.post("/login", unifiedLogin);
+router.get("/me", protect, getMe);
 
 // NODE_ENV alone isn't reliable here — Render doesn't set it unless the
 // dashboard is explicitly configured to, so this used to silently fall
