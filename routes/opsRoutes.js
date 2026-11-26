@@ -119,6 +119,7 @@ router.post("/camps/:id/closing-report", camp.closingReport);
 
 router.get("/attendance/roster", att.roster);
 router.get("/attendance/me", att.myAttendance);
+router.get("/attendance/live", att.myLiveActivities);
 router.get("/attendance/activities", att.supervisedActivities);
 router.get("/attendance/queue", att.attendanceQueue);
 router.post("/attendance/sync", att.syncAttendance);

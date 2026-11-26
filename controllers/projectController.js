@@ -129,11 +129,18 @@ export const updateProject = handle(async (req, res) => {
   const set = await fields(req, b, p);
   if (!Object.keys(set).length) throw bad("Nothing to update");
   const u = await cas(p, { $set: set });
+  // Keep upcoming sessions' supervisors and participants in step with the project.
+  if ((set.responsibleStaff || set.volunteerTeams) && ["scheduled", "in_progress"].includes(p.status)) {
+    const sync = {};
+    if (set.responsibleStaff) sync.assignedTeacher = set.responsibleStaff;
+    if (set.volunteerTeams) sync.participants = [...new Set(set.volunteerTeams.flatMap((t) => t.members.map(String)))].map((x) => new mongoose.Types.ObjectId(x));
+    await Event.updateMany({ project: p._id, status: "Upcoming" }, { $set: sync });
+  }
   audit(req, "project.update", "Project", p._id, Object.keys(set));
   res.json({ success: true, project: u });
 });
 
-const scheduleSessions = async (p) => {
+const scheduleSessions = async (p, coordinatorId) => {
   const dates = sessionDates(p.schedule, p.kind);
   if (!dates.length) throw bad("Set a start date (and recurrence) before scheduling");
   const participants = [...new Set(p.volunteerTeams.flatMap((t) => t.members.map(String)))].map((x) => new mongoose.Types.ObjectId(x));
@@ -148,6 +155,9 @@ const scheduleSessions = async (p) => {
         institution: p.institution,
         hours: p.schedule.sessionHours,
         assignedTeacher: p.responsibleStaff,
+        // Shows the session under the scheduling coordinator's "My events",
+        // where it is started and completed.
+        assignedCoordinators: coordinatorId || p.createdBy,
         participants,
         type: "regular",
         status: "Upcoming",
@@ -211,7 +221,7 @@ export const transitionProject = handle(async (req, res) => {
   if (action === "schedule") {
     const pending = p.requiredPermissions.filter((x) => x.status === "pending");
     if (pending.length) throw bad(`Permissions still pending: ${pending.map((x) => x.name).join(", ")}`);
-    sessions = await scheduleSessions(p);
+    sessions = await scheduleSessions(p, req.user._id);
   }
   if (action === "review") {
     const summary = reasonRequired(req.body?.summary || reason, "review a project (write a summary)");
@@ -230,7 +240,7 @@ export const addSession = handle(async (req, res) => {
   if (!isStaff(req, p)) throw forbid();
   if (!["scheduled", "in_progress"].includes(p.status)) throw conflict("Sessions can be added once the project is scheduled");
   const d = date(req.body?.date, "session date").toISOString().slice(0, 10);
-  const r = await scheduleSessions({ ...p.toObject(), kind: "standalone", schedule: { ...p.schedule.toObject(), startDate: d } });
+  const r = await scheduleSessions({ ...p.toObject(), kind: "standalone", schedule: { ...p.schedule.toObject(), startDate: d } }, req.coordinator ? req.user._id : p.createdBy);
   res.status(r.created ? 201 : 200).json({ success: true, ...r });
 });
 

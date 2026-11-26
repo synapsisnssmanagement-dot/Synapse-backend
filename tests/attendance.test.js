@@ -101,3 +101,13 @@ test("self check-in: denied location is recorded as unverified, not rejected; GP
   assert.equal((await call("POST", "/api/ops/attendance/self/out", F.t.vol, { event: live._id })).status, 409);
   assert.equal((await call("POST", "/api/ops/attendance/self/in", F.t.vol2, { event: live._id })).status, 403, "not on roster");
 });
+
+test("volunteer live list shows ongoing events with venue range and today's record", async () => {
+  const r = await call("GET", "/api/ops/attendance/live", F.t.vol);
+  assert.equal(r.status, 200);
+  const ev = r.data.events.find((e) => String(e._id) === String(live._id));
+  assert.equal(ev.geo.radius, 300);
+  assert.ok(ev.record?.checkInAt, "today's check-in included");
+  assert.equal((await call("GET", "/api/ops/attendance/live", F.t.vol2)).data.events.length, 0, "not on roster → not listed");
+  assert.equal((await call("GET", "/api/ops/attendance/live", F.t.teacher)).status, 403);
+});

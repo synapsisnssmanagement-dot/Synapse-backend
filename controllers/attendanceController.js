@@ -279,3 +279,14 @@ export const attendanceQueue = handle(async (req, res) => {
   const records = await AttendanceRecord.find(q).populate("student", "name").populate("event", "title").sort({ updatedAt: -1 }).limit(200).select("-appliedOps").lean();
   res.json({ success: true, records });
 });
+
+// Volunteer: live (Ongoing) activities they're on, with venue/range and
+// today's check-in record, for the Check in page.
+export const myLiveActivities = handle(async (req, res) => {
+  requireVolunteer(req);
+  const events = await Event.find({ institution: inst(req), status: "Ongoing", participants: req.user._id }).select("title location date endDate type geo startTime").sort({ date: 1 }).lean();
+  const today = dayKey(new Date());
+  const recs = await AttendanceRecord.find({ student: req.user._id, event: T({ $in: events.map((e) => e._id) }), sessionDate: today }).select("event status checkInAt checkOutAt minutes verification geo").lean();
+  const byEvent = new Map(recs.map((r) => [String(r.event), r]));
+  res.json({ success: true, today, events: events.map((e) => ({ ...e, record: byEvent.get(String(e._id)) || null })) });
+});

@@ -320,6 +320,7 @@ export const startEvent = async (req, res) => {
         .status(404)
         .json({ success: false, message: "Event not found" });
     }
+    if (denyCrossInstitution(req, res, event)) return;
 
     if (event.status !== "Upcoming") {
       return res.status(400).json({
@@ -356,6 +357,7 @@ export const completeEvent = async (req, res) => {
         .status(404)
         .json({ success: false, message: "Event not found" });
     }
+    if (denyCrossInstitution(req, res, event)) return;
 
     if (event.status !== "Ongoing") {
       return res.status(400).json({
