@@ -18,3 +18,6 @@ yarn-error.log*
 # OS / editor junk
 .DS_Store
 Thumbs.db
+
+# Local isolated dev database (see docs/LOCAL_SETUP.md)
+.localdb/

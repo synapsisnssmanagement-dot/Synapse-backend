@@ -1,3 +1,4 @@
+import { verifyCompletion } from "./certController.js";
 import Certificate from "../models/Certificate.js";
 
 // Unauthenticated: anyone with a certificate ID can confirm it's genuine.
@@ -10,13 +11,17 @@ export const verifyCertificate = async (req, res) => {
 
     const certificate = await Certificate.findOne({ certId }).populate("institution", "name");
     if (!certificate) {
+      const completion = await verifyCompletion(certId);
+      if (completion) return res.json({ success: true, valid: completion.status === "issued", certificate: completion });
       return res.status(404).json({ success: false, valid: false, message: "No certificate found with this ID" });
     }
 
     res.json({
       success: true,
-      valid: true,
+      valid: !certificate.revokedAt,
       certificate: {
+        kind: "event_participation",
+        status: certificate.revokedAt ? "revoked" : "issued",
         certId: certificate.certId,
         studentName: certificate.studentName,
         department: certificate.department,

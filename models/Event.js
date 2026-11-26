@@ -71,6 +71,15 @@ const eventSchema = new mongoose.Schema(
 
     communityRequest: { type: mongoose.Schema.Types.ObjectId, ref: "CommunityRequest" },
 
+    // Additive: session of a Project (see models/Project.js). sessionKey is
+    // the session date, so scheduling twice cannot create duplicate sessions.
+    project: { type: mongoose.Schema.Types.ObjectId, ref: "Project" },
+    sessionKey: { type: String },
+    // Additive: legacy Event.impact figures were never verified; they appear on
+    // public pages only after an officer approves them.
+    impactPublicApproved: { type: Boolean, default: false },
+    impactPublicApprovedBy: { type: mongoose.Schema.Types.ObjectId },
+
     donationOpen: {
       type: Boolean,
       default: true,
@@ -116,5 +125,7 @@ const eventSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+eventSchema.index({ project: 1, sessionKey: 1 }, { unique: true, partialFilterExpression: { project: { $exists: true } } });
 
 export default mongoose.model("Event", eventSchema);

@@ -1,9 +1,15 @@
+import mongoose from "mongoose";
 import Message from "../models/Message.js";
 import Event from "../models/Event.js";
 
 export const getMessagesForEvent = async (req, res) => {
   try {
     const { eventId } = req.params;
+    if (!mongoose.isValidObjectId(eventId)) return res.status(400).json({ success: false, message: "Invalid event" });
+    const event = await Event.findById(eventId).select("institution").lean();
+    if (!event || String(event.institution) !== String(req.user?.institution)) {
+      return res.status(404).json({ success: false, message: "Event not found" });
+    }
     const messages = await Message.find({ eventId })
       .sort({ createdAt: 1 })
       .limit(200)

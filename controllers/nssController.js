@@ -7,6 +7,8 @@ import Event from "../models/Event.js";
 import Institution from "../models/Institution.js";
 import Notification from "../models/Notification.js";
 import Student from "../models/Student.js";
+import LedgerEntry from "../models/LedgerEntry.js";
+import OutcomeRecord from "../models/OutcomeRecord.js";
 import { emitToInstitution } from "../sockets/io.js";
 import {
   NSS_TARGET_HOURS,
@@ -19,6 +21,7 @@ import {
   rankVolunteers,
 } from "../utils/nss.js";
 import { denyCrossInstitution } from "../utils/ownership.js";
+import { ledgerEligibility, yearMinutesByStudent } from "../utils/ledgerTotals.js";
 
 const fail = (res, error, message = "Something went wrong. Please try again.") => {
   console.error("nssController:", error);
@@ -52,10 +55,15 @@ export const getEligibility = async (req, res) => {
       completedEvents(institution),
     ]);
     const map = computeEligibility(volunteers.map((v) => v._id), events);
-    const rows = volunteers.map((v) => ({ ...v, ...map.get(String(v._id)) }));
+    const ledger = await ledgerEligibility(institution, volunteers.map((v) => v._id));
+    // Verified (ledger) figures are primary; attendance-derived figures are
+    // returned alongside as `legacy` for the transition period.
+    const rows = volunteers.map((v) => ({ ...v, ...ledger.map.get(String(v._id)), legacy: map.get(String(v._id)) }));
     res.json({
       success: true,
-      rules: { targetHours: NSS_TARGET_HOURS, yearlyHours: NSS_YEARLY_HOURS },
+      rules: ledger.policy
+        ? { targetHours: (ledger.policy.rules.regularMinutesPerYear * ledger.policy.rules.yearsRequired) / 60, yearlyHours: ledger.policy.rules.regularMinutesPerYear / 60, policy: { name: ledger.policy.name, version: ledger.policy.version, requirementType: ledger.policy.requirementType } }
+        : { targetHours: NSS_TARGET_HOURS, yearlyHours: NSS_YEARLY_HOURS, policy: null },
       currentYear: academicYearLabel(academicYearOf(new Date())),
       volunteers: rows.sort((a, b) => b.total - a.total),
     });
@@ -67,10 +75,14 @@ export const getEligibility = async (req, res) => {
 export const getMyEligibility = async (req, res) => {
   try {
     const events = await completedEvents(req.user.institution);
-    const mine = computeEligibility([req.user._id], events).get(String(req.user._id));
+    const legacy = computeEligibility([req.user._id], events).get(String(req.user._id));
+    const ledger = await ledgerEligibility(req.user.institution, [req.user._id]);
+    const mine = { ...ledger.map.get(String(req.user._id)), legacy };
     res.json({
       success: true,
-      rules: { targetHours: NSS_TARGET_HOURS, yearlyHours: NSS_YEARLY_HOURS },
+      rules: ledger.policy
+        ? { targetHours: (ledger.policy.rules.regularMinutesPerYear * ledger.policy.rules.yearsRequired) / 60, yearlyHours: ledger.policy.rules.regularMinutesPerYear / 60, policy: { name: ledger.policy.name, version: ledger.policy.version } }
+        : { targetHours: NSS_TARGET_HOURS, yearlyHours: NSS_YEARLY_HOURS, policy: null },
       currentYear: academicYearLabel(academicYearOf(new Date())),
       eligibility: mine,
     });
@@ -100,7 +112,9 @@ export const matchVolunteers = async (req, res) => {
         .select("date participants")
         .lean(),
     ]);
-    const eligibility = computeEligibility(volunteers.map((v) => v._id), events);
+    // Need for hours is judged on verified ledger service.
+    const { map: eligibility } = await ledgerEligibility(institution, volunteers.map((v) => v._id));
+    void events;
     res.json({ success: true, suggestions: rankVolunteers(event, volunteers, eligibility, sameDay) });
   } catch (error) {
     fail(res, error);
@@ -370,42 +384,52 @@ export const getPublicImpact = async (req, res) => {
     const institution = await Institution.findById(institutionId).select("name address").lean();
     if (!institution) return res.status(404).json({ success: false, message: "Institution not found" });
 
-    const events = await Event.find({ institution: institutionId, status: "Completed" })
-      .select("title date endDate location type impact hours calculatedHours attendance campDays images")
-      .sort({ date: -1 })
-      .lean();
-
+    // Public figures use approved data only: verified ledger service,
+    // published verified outcomes, and legacy event impact an officer approved.
+    const instId = new mongoose.Types.ObjectId(String(institutionId));
+    const [events, ledger, perEvent, outcomes] = await Promise.all([
+      Event.find({ institution: institutionId, status: "Completed" }).select("title date location type impact impactPublicApproved images").sort({ date: -1 }).lean(),
+      LedgerEntry.aggregate([
+        { $match: { institution: instId, entryType: { $ne: "legacy" }, programme: { $ne: "community_service" } } },
+        { $group: { _id: null, minutes: { $sum: "$minutes" }, volunteers: { $addToSet: "$student" } } },
+      ]),
+      LedgerEntry.aggregate([
+        { $match: { institution: instId, entryType: { $ne: "legacy" }, programme: { $ne: "community_service" }, event: { $ne: null } } },
+        { $group: { _id: { e: "$event", s: "$student" }, m: { $sum: "$minutes" } } },
+        { $match: { m: { $gt: 0 } } },
+        { $group: { _id: "$_id.e", volunteers: { $sum: 1 } } },
+      ]),
+      OutcomeRecord.find({ institution: instId, "verification.status": "verified", "publication.approved": true, level: "reported" }).select("metric unit value event").lean(),
+    ]);
     const totals = new Map();
-    let hours = 0;
-    const volunteers = new Set();
-    for (const e of events) {
-      for (const id of creditedStudentIds(e)) {
-        volunteers.add(id);
-        hours += creditedHours(e, id);
-      }
-      for (const i of e.impact || []) {
-        const key = `${i.metric.toLowerCase()}|${(i.unit || "").toLowerCase()}`;
-        const t = totals.get(key) || { metric: i.metric, unit: i.unit, value: 0 };
-        t.value += i.value;
-        totals.set(key, t);
-      }
-    }
+    const add = (metric, unit, value) => {
+      const key = `${metric.toLowerCase()}|${(unit || "").toLowerCase()}`;
+      const t = totals.get(key) || { metric, unit, value: 0 };
+      t.value += value;
+      totals.set(key, t);
+    };
+    for (const o of outcomes) add(o.metric, o.unit, o.value);
+    for (const e of events) if (e.impactPublicApproved) for (const i of e.impact || []) add(i.metric, i.unit, i.value);
+    const volunteersByEvent = new Map(perEvent.map((x) => [String(x._id), x.volunteers]));
+    const outcomesByEvent = new Map();
+    for (const o of outcomes) if (o.event) outcomesByEvent.set(String(o.event), [...(outcomesByEvent.get(String(o.event)) || []), { metric: o.metric, value: o.value, unit: o.unit }]);
 
     res.json({
       success: true,
       institution,
-      summary: { drives: events.length, volunteers: volunteers.size, hours: Math.round(hours), camps: events.filter((e) => e.type === "special_camp").length },
+      basis: "Verified service hours and published, verified outcomes only.",
+      summary: { drives: events.length, volunteers: ledger[0]?.volunteers?.length || 0, hours: Math.round((ledger[0]?.minutes || 0) / 60), camps: events.filter((e) => e.type === "special_camp").length },
       impact: [...totals.values()].sort((a, b) => b.value - a.value),
-      // Public page: titles, dates, places and outcomes only — never names.
+      // Public page: titles, dates, places and approved outcomes only — never names.
       recent: events.slice(0, 12).map((e) => ({
         _id: e._id,
         title: e.title,
         date: e.date,
         location: e.location,
         type: e.type,
-        impact: e.impact || [],
+        impact: [...(e.impactPublicApproved ? e.impact || [] : []), ...(outcomesByEvent.get(String(e._id)) || [])],
         cover: e.images?.[0]?.url || null,
-        volunteers: creditedStudentIds(e).size,
+        volunteers: volunteersByEvent.get(String(e._id)) || 0,
       })),
     });
   } catch (error) {
@@ -436,17 +460,19 @@ export const annualReport = async (req, res) => {
       { $group: { _id: null, total: { $sum: "$amount" }, count: { $sum: 1 } } },
     ]);
 
+    // Hours come from the verified ledger for this academic year.
+    const ledgerYear = await yearMinutesByStudent(institutionId, startYear);
     const yearHours = new Map();
     const active = new Set();
     let totalHours = 0;
-    for (const e of completed) {
-      for (const id of creditedStudentIds(e)) {
-        const h = creditedHours(e, id);
-        active.add(id);
-        yearHours.set(id, (yearHours.get(id) || 0) + h);
-        totalHours += h;
-      }
+    for (const [id, v] of ledgerYear) {
+      const hrs = Math.round((v.regular + v.camp) / 6) / 10;
+      if (hrs <= 0) continue;
+      active.add(id);
+      yearHours.set(id, hrs);
+      totalHours += hrs;
     }
+    void creditedStudentIds;
     const impact = new Map();
     for (const e of completed) {
       for (const i of e.impact || []) {
@@ -454,8 +480,7 @@ export const annualReport = async (req, res) => {
         impact.set(key, { metric: i.metric, unit: i.unit, value: (impact.get(key)?.value || 0) + i.value });
       }
     }
-    const allCompleted = await completedEvents(institutionId);
-    const eligibility = computeEligibility(volunteers.map((v) => v._id), allCompleted);
+    const { map: eligibility } = await ledgerEligibility(institutionId, volunteers.map((v) => v._id));
     const eligibleCount = [...eligibility.values()].filter((s) => s.eligible).length;
     const nameOf = new Map(volunteers.map((v) => [String(v._id), v]));
     const top = [...yearHours.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);

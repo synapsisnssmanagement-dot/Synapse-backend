@@ -1,3 +1,4 @@
+import LedgerEntry from "../models/LedgerEntry.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
@@ -442,10 +443,13 @@ export const getDashboardStat = async (req, res) => {
     const upcomingEvents = await Event.countDocuments({ status: "Upcoming" });
 
     // ======= Hours contributed =======
-    const hoursAgg = await Student.aggregate([
-      { $group: { _id: null, total: { $sum: "$totalVolunteerHours" } } },
+    // Verified service from the ledger; attendance-derived counter kept separately.
+    const [hoursAgg, legacyAgg] = await Promise.all([
+      LedgerEntry.aggregate([{ $match: { entryType: { $ne: "legacy" }, programme: { $ne: "community_service" } } }, { $group: { _id: null, total: { $sum: "$minutes" } } }]),
+      Student.aggregate([{ $group: { _id: null, total: { $sum: "$totalVolunteerHours" } } }]),
     ]);
-    const totalHours = hoursAgg[0]?.total || 0;
+    const totalHours = Math.round(((hoursAgg[0]?.total || 0) / 60) * 10) / 10;
+    const legacyHours = legacyAgg[0]?.total || 0;
 
     // ======= Donations =======
     const donationAgg = await Donation.aggregate([
@@ -509,6 +513,8 @@ export const getDashboardStat = async (req, res) => {
         },
         hours: {
           total: totalHours,
+          legacy: legacyHours,
+          source: "ledger",
         },
         donation: {
           total: donationAgg[0]?.total || 0,

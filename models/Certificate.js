@@ -12,6 +12,10 @@ const certificateSchema = new mongoose.Schema(
     eventDate: Date,
     hours: { type: Number, default: 0 },
     issuedAt: { type: Date, default: Date.now },
+    // Additive: event participation certificates can be revoked; the record is kept.
+    revokedAt: { type: Date },
+    revokeReason: { type: String },
+    revokedBy: { type: mongoose.Schema.Types.ObjectId },
   },
   { timestamps: true }
 );

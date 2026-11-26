@@ -19,6 +19,9 @@ const communityRequestSchema = new mongoose.Schema(
     preferredDate: { type: Date },
     status: { type: String, enum: ["new", "accepted", "declined"], default: "new", index: true },
     event: { type: mongoose.Schema.Types.ObjectId, ref: "Event" },
+    // Additive: the project this request was turned into. The request's own
+    // fields are never edited when linking.
+    project: { type: mongoose.Schema.Types.ObjectId, ref: "Project" },
   },
   { timestamps: true }
 );

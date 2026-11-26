@@ -25,15 +25,18 @@ const elapsedOfYear = (now = new Date()) => {
 const presentIds = (event) =>
   new Set((event.attendance || []).filter((a) => a.status === "Present" && a.student).map((a) => String(a.student._id || a.student)));
 
-// A camp counts once the student was present on at least half its roll-call
-// days; a camp with no daily roll call falls back to the event attendance.
-export const attendedCamp = (event, studentId) => {
+// Legacy (attendance-derived) camp completion. Previously a camp counted once
+// the student was on half its roll-call days, which let a partial camp read
+// as a completed seven-day camp. Now the student must be on at least
+// CAMP_REQUIRED_DAYS roll calls; a camp without a daily roll call cannot
+// establish completion on its own. Policy-based evaluation of verified
+// ledger service lives in utils/serviceRules.js.
+export const CAMP_REQUIRED_DAYS = 7;
+export const campDaysAttended = (event, studentId) => {
   const id = String(studentId);
-  const days = event.campDays || [];
-  if (!days.length) return presentIds(event).has(id);
-  const attended = days.filter((d) => (d.present || []).some((p) => String(p) === id)).length;
-  return attended >= Math.ceil(days.length / 2);
+  return (event.campDays || []).filter((d) => (d.present || []).some((p) => String(p) === id)).length;
 };
+export const attendedCamp = (event, studentId) => campDaysAttended(event, studentId) >= CAMP_REQUIRED_DAYS;
 
 // Hours one student earns from one completed event. A regular drive credits
 // the time it actually ran to everyone marked Present. A multi-day camp
@@ -79,8 +82,11 @@ export const computeEligibility = (studentIds, events, now = new Date()) => {
         s.years[year] = (s.years[year] || 0) + hours;
         if (year === currentYear) s.currentYear += hours;
       }
-      if (event.type === "special_camp" && attendedCamp(event, id)) {
-        s.camps.push({ id: event._id, title: event.title, date: event.date });
+      if (event.type === "special_camp") {
+        const days = campDaysAttended(event, id);
+        if (days > 0 || presentIds(event).has(id)) {
+          s.camps.push({ id: event._id, title: event.title, date: event.date, daysAttended: days, complete: days >= CAMP_REQUIRED_DAYS });
+        }
       }
     }
   }
@@ -89,8 +95,12 @@ export const computeEligibility = (studentIds, events, now = new Date()) => {
   for (const s of byStudent.values()) {
     s.total = Math.round(s.total * 100) / 100;
     s.currentYear = Math.round(s.currentYear * 100) / 100;
-    s.campDone = s.camps.length > 0;
-    s.eligible = s.total >= NSS_TARGET_HOURS && s.campDone;
+    s.campDone = s.camps.some((c) => c.complete);
+    // A lifetime total alone does not establish two-year completion: at least
+    // two academic years must each reach the yearly target.
+    s.qualifyingYears = Object.entries(s.years).filter(([, h]) => h >= NSS_YEARLY_HOURS).length;
+    s.eligible = s.total >= NSS_TARGET_HOURS && s.qualifyingYears >= 2 && s.campDone;
+    s.source = "legacy-attendance";
     s.remainingHours = Math.max(0, Math.round((NSS_TARGET_HOURS - s.total) * 100) / 100);
     // Behind pace: under three-quarters of where they should be by now this year.
     s.behindPace = !s.eligible && s.currentYear < expectedNow * 0.75;

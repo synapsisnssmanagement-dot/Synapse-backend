@@ -1,3 +1,7 @@
+import Enrolment from "../models/Enrolment.js";
+import InstitutionSettings from "../models/InstitutionSettings.js";
+import AttendanceRecord from "../models/AttendanceRecord.js";
+import LedgerEntry from "../models/LedgerEntry.js";
 import Student from "../models/Student.js";
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
@@ -1629,6 +1633,23 @@ export const checkInToEvent = async (req, res) => {
     }
 
     await event.save();
+    // Also record a session-level check-in (evidence for supervisor verification).
+    try {
+      const day = new Date().toISOString().slice(0, 10);
+      await AttendanceRecord.updateOne(
+        { event: event._id, student: studentId, sessionDate: day },
+        {
+          $setOnInsert: {
+            institution: event.institution, status: "present", checkInAt: new Date(), method: distance != null ? "self_gps" : "self_no_location",
+            geo: distance != null ? { distance, withinRadius: true, accuracy: Number(req.body?.accuracy) || null } : { note: "No venue pin set" },
+            recordedBy: studentId, verification: "unverified",
+          },
+        },
+        { upsert: true }
+      );
+    } catch (e) {
+      if (e?.code !== 11000) console.error("session check-in record failed:", e.message);
+    }
     emitToInstitution(event.institution, "event:attendance", {
       eventId: String(event._id),
       updates: [{ studentId: String(studentId), status: "Present", at: new Date(), via: "qr" }],
@@ -1650,12 +1671,43 @@ export const getLeaderboard = async (req, res) => {
       return res.status(400).json({ success: false, message: "No institution on this account" });
     }
 
-    const students = await Student.find({ institution: institutionId })
+    // Ranked by verified ledger service (regular + camp). The stored
+    // totalVolunteerHours counter is attendance-derived and shown only as legacy.
+    const sums = await LedgerEntry.aggregate([
+      { $match: { institution: new mongoose.Types.ObjectId(String(institutionId)), programme: { $ne: "community_service" } } },
+      { $group: { _id: "$student", verified: { $sum: { $cond: [{ $eq: ["$entryType", "legacy"] }, 0, "$minutes"] } }, legacy: { $sum: { $cond: [{ $eq: ["$entryType", "legacy"] }, "$minutes", 0] } } } },
+    ]);
+    const byId = new Map(sums.map((r) => [String(r._id), r]));
+    const students = await Student.find({ institution: institutionId, role: "volunteer" })
       .select("name department totalVolunteerHours level profileImage")
-      .sort({ totalVolunteerHours: -1 })
-      .limit(50);
+      .lean();
+    // Age-appropriate defaults: Class XI/XII volunteers are hidden or shown by
+    // first name only (institution setting), and never with a photo.
+    const [minors, settings] = await Promise.all([
+      Enrolment.distinct("student", { institution: institutionId, level: mongoose.trusted({ $in: ["XI", "XII", "community_service"] }) }),
+      InstitutionSettings.findOne({ institution: institutionId }).select("privacy").lean(),
+    ]);
+    const minorSet = new Set(minors.map(String));
+    const minorsMode = settings?.privacy?.minorsPublicProfile || "hidden";
+    const me = String(req.user._id);
+    const leaderboard = students
+      .filter((s) => !minorSet.has(String(s._id)) || minorsMode !== "hidden" || String(s._id) === me)
+      .map((s) => {
+        const r = byId.get(String(s._id));
+        const minor = minorSet.has(String(s._id)) && String(s._id) !== me;
+        return {
+          ...s,
+          name: minor ? String(s.name || "").split(" ")[0] : s.name,
+          department: minor ? "" : s.department,
+          profileImage: minor ? undefined : s.profileImage,
+          verifiedHours: Math.round(((r?.verified || 0) / 60) * 10) / 10,
+          legacyHours: s.totalVolunteerHours || 0,
+        };
+      })
+      .sort((a, b) => b.verifiedHours - a.verifiedHours || b.legacyHours - a.legacyHours)
+      .slice(0, 50);
 
-    return res.status(200).json({ success: true, leaderboard: students });
+    return res.status(200).json({ success: true, leaderboard, source: "ledger" });
   } catch (error) {
     console.error("❌ Error fetching leaderboard:", error);
     return res.status(500).json({ success: false, message: "Could not load leaderboard" });

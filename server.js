@@ -35,6 +35,7 @@ import mentorshipRouter from "./routes/mentorshipRoutes.js";
 import mentorshipMessage from "./routes/mentorshipMessageRoutes.js";
 import publicRouter from "./routes/publicRoutes.js";
 import nssRouter from "./routes/nssRoutes.js";
+import opsRouter from "./routes/opsRoutes.js";
 import { scheduleEventReminders } from "./jobs/eventReminders.js";
 import { setIo } from "./sockets/io.js";
 import MentorshipMessage from "./models/MentorshipMessage.js";
@@ -60,6 +61,8 @@ const allowedOrigins = [
   "https://synapse-three-rho.vercel.app", // your frontend
   "http://localhost:5173", // local dev
   "https://synapsenssmanagement.vercel.app",
+  // Optional extra origins for isolated local test stacks (comma-separated).
+  ...(process.env.CORS_EXTRA_ORIGINS || "").split(",").map((o) => o.trim()).filter(Boolean),
 ];
 
 app.use(
@@ -143,6 +146,7 @@ app.use("/api/donations", donationRouter);
 app.use("/api/mentorship", mentorshipRouter);
 app.use("/api/public", publicRouter);
 app.use("/api/nss", nssRouter);
+app.use("/api/ops", opsRouter);
 app.use("/api/mentorshipmessage", mentorshipMessage);
 
 // Unmatched route.

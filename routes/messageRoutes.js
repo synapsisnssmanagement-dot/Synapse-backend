@@ -11,7 +11,8 @@ import {
 } from "../middleware/authMiddleware.js";
 
 const messagerouter = express.Router();
-messagerouter.get("/events/:eventId/messages", getMessagesForEvent);
+// Event chat is private to the event's institution (was previously unauthenticated).
+messagerouter.get("/events/:eventId/messages", protect, getMessagesForEvent);
 messagerouter.post("/coordinator/send", protect, coordinatorOnly, sendMessage);
 messagerouter.post("/teacher/send", protect, teacherOnly, sendMessage);
 messagerouter.post("/student/send", protect, volunteerOnly, sendMessage);
